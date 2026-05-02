@@ -174,3 +174,24 @@ Stage Summary:
 - Main page header: new Heart button with badge showing favorites count, links to /favorites
 - Customer sidebar menu: already had Favoritos link with Heart icon
 - Access to favorites: via header heart button (all users) or sidebar menu (logged-in customers)
+
+---
+Task ID: 1
+Agent: main
+Task: Fix color flash (FOUC) — eliminate default color showing before custom theme loads
+
+Work Log:
+- Analyzed the 3-layer color loading system: CSS defaults → blocking <script> from localStorage → ConfigContext API fetch
+- Identified root cause: CSS file loads with default values (#FF6B35) and renders before the blocking script can override them
+- Added CSS anti-flash rule: `html:not([data-theme-ready]) body { opacity: 0 !important; }` — body is invisible until theme is ready
+- Enhanced blocking script in layout.tsx to set `data-theme-ready` attribute after applying colors from localStorage
+- ConfigContext also sets `data-theme-ready` as safety net after API config loads
+- Fixed `--accent-light` to use proper alpha tint (`color + '1A'`) instead of solid accent color
+- Added 1.5s safety timeout to force-reveal body in case both script and React fail
+- Committed and pushed to GitHub (043800f)
+
+Stage Summary:
+- 3 files modified: globals.css, layout.tsx, ConfigContext.tsx
+- Body is now invisible until custom theme colors are confirmed applied
+- No more visible flash of default orange color on page load
+- Safety mechanisms ensure user never gets stuck on blank screen
