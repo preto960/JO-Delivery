@@ -223,3 +223,27 @@ Stage Summary:
 - JO-Delivery is now a standalone delivery-only app
 - JO-Shop no longer contains delivery functionality
 
+---
+Task ID: 2
+Agent: Main
+Task: Restaurar en JO-Delivery: registro, 2FA, settings, admin screens, loader con "JO"
+
+Work Log:
+- Copiadas 8 pantallas de admin desde mobile/JO-Shop: AdminDashboard, AdminProducts, AdminCategories, AdminOrders, AdminRoles, AdminUsers, AdminStores, AdminBatches
+- Copiadas 4 pantallas adicionales: RegisterScreen, VerificationScreen, SettingsScreen, SettingsSectionScreen
+- Adaptado RegisterScreen: nombre JO-Delivery, rol por defecto 'delivery', eliminado link GuestTabs
+- Adaptado VerificationScreen: default target 'DeliveryMainTabs' en vez de 'CustomerTabs'
+- Restaurado LoginScreen: link "Regístrate" navegando a Register, navegación a VerificationScreen para 2FA (en vez de error estático)
+- Restaurado AppNavigator: AdminTabs (Panel + Config), Register, Verification, Settings, SettingsSection
+- Restaurado App.js: SCREEN_ROUTES completos para admin screens
+- Restaurado api.js: todos los endpoints de admin (products, categories, orders, roles, users, stores, batches, banners, config)
+- ThemeLoader: iniciales hardcoded a "JO" (en vez de dinámicas desde shop name)
+- LoadingScreen en AppNavigator: ya tiene "JO" en el texto
+- Commit 701a4e1 pusheado a github.com/preto960/JO-Delivery
+
+Stage Summary:
+- 17 archivos modificados/creados (13,705 insertiones, 28 eliminaciones)
+- JO-Delivery ahora tiene: Registro de usuarios, 2FA en login, Settings, todas las pantallas de admin
+- Loader muestra "JO" en ambas instancias (ThemeLoader + LoadingScreen)
+- Push exitoso a origin/main
+
