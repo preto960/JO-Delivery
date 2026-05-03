@@ -5,8 +5,8 @@ import theme from '@theme/styles';
 
 const ThemeLoader = () => {
   const {config, loading} = useConfig();
-  const shopName = config.shop_name || 'JO-Delivery';
-  const initials = shopName.slice(0, 2).toUpperCase();
+  // Siempre mostrar "JO" como iniciales
+  const initials = 'JO';
 
   // Animated border rotation
   const rotateAnim = React.useRef(new Animated.Value(0)).current;

@@ -9,8 +9,20 @@ import theme from '@theme/styles';
 
 // Screens
 import LoginScreen from '@screens/LoginScreen';
+import RegisterScreen from '@screens/RegisterScreen';
 import DeliveryOrdersScreen from '@screens/DeliveryOrdersScreen';
 import ProfileScreen from '@screens/ProfileScreen';
+import VerificationScreen from '@screens/VerificationScreen';
+import SettingsScreen from '@screens/SettingsScreen';
+import SettingsSectionScreen from '@screens/SettingsSectionScreen';
+import AdminDashboardScreen from '@screens/AdminDashboardScreen';
+import AdminProductsScreen from '@screens/AdminProductsScreen';
+import AdminCategoriesScreen from '@screens/AdminCategoriesScreen';
+import AdminOrdersScreen from '@screens/AdminOrdersScreen';
+import AdminRolesScreen from '@screens/AdminRolesScreen';
+import AdminUsersScreen from '@screens/AdminUsersScreen';
+import AdminStoresScreen from '@screens/AdminStoresScreen';
+import AdminBatchesScreen from '@screens/AdminBatchesScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -37,6 +49,53 @@ const DeliveryTabs = () => {
       })}>
       <Tab.Screen name="DeliveryOrders" component={DeliveryOrdersScreen} options={{tabBarLabel: 'Entregas'}} />
       <Tab.Screen name="DeliveryProfile" component={ProfileScreen} options={{tabBarLabel: 'Perfil'}} />
+    </Tab.Navigator>
+  );
+};
+
+// ─── Admin Tabs (Panel + Configuración) ──────────────────────────────────
+const AdminTabs = () => {
+  const {canViewModule, hasRole} = useAuth();
+  const {isMultiStore} = useConfig();
+  const {config} = useConfig();
+  const activeColor = config.primary_color || theme.colors.accent;
+
+  const tabs = [];
+
+  if (canViewModule('dashboard')) {
+    tabs.push({name: 'AdminDashboard', component: AdminDashboardScreen, label: 'Panel', icon: 'grid-outline'});
+  }
+  if (canViewModule('products')) {
+    tabs.push({name: 'AdminProducts', component: AdminProductsScreen, label: 'Productos', icon: 'pricetag-outline'});
+  }
+  if (canViewModule('batches')) {
+    tabs.push({name: 'AdminBatches', component: AdminBatchesScreen, label: 'Lotes', icon: 'layers-outline'});
+  }
+  if (canViewModule('orders')) {
+    tabs.push({name: 'AdminOrders', component: AdminOrdersScreen, label: 'Pedidos', icon: 'receipt-outline'});
+  }
+  if (tabs.length === 0) {
+    tabs.push({name: 'AdminDashboard', component: AdminDashboardScreen, label: 'Panel', icon: 'grid-outline'});
+  }
+
+  return (
+    <Tab.Navigator
+      screenOptions={({route}) => ({
+        headerShown: false,
+        tabBarActiveTintColor: activeColor,
+        tabBarInactiveTintColor: theme.colors.textSecondary,
+        tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarIcon: ({color, size}) => {
+          const icons = {
+            AdminDashboard: 'grid-outline',
+            SettingsHub: 'settings-outline',
+          };
+          return <Icon name={icons[route.name] || 'circle-outline'} size={size} color={color} />;
+        },
+      })}>
+      <Tab.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{tabBarLabel: 'Panel'}} />
+      <Tab.Screen name="SettingsHub" component={SettingsScreen} options={{tabBarLabel: 'Config'}} />
     </Tab.Navigator>
   );
 };
@@ -72,7 +131,7 @@ const LoadingScreen = () => {
           <View style={[styles.loaderBorderSeg, {borderLeftColor: '#E0E0E0'}]} />
         </Animated.View>
         <View style={styles.loaderInner}>
-          <Text style={styles.loaderText}>JD</Text>
+          <Text style={styles.loaderText}>JO</Text>
         </View>
       </View>
     </View>
@@ -83,6 +142,7 @@ const LoadingScreen = () => {
 const AppNavigator = () => {
   const {isRestoring, isAuthenticated, hasRole} = useAuth();
   const isDelivery = hasRole('delivery');
+  const isStaff = hasRole('admin') || hasRole('editor');
 
   if (isRestoring) {
     return <LoadingScreen />;
@@ -97,12 +157,27 @@ const AppNavigator = () => {
         contentStyle: {backgroundColor: theme.colors.background},
       }}>
       {!isAuthenticated ? (
-        // ─── LOGIN ──────────────────────────────────────────────────
-        <Stack.Screen name="Login" component={LoginScreen} />
+        // ─── LOGIN / REGISTER ──────────────────────────────────────
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+        </>
+      ) : isStaff ? (
+        // ─── ADMIN ────────────────────────────────────────────────
+        <>
+          <Stack.Screen name="AdminMainTabs" component={AdminTabs} />
+          <Stack.Screen name="AdminCategoriesPage" component={AdminCategoriesScreen} />
+          <Stack.Screen name="AdminStoresPage" component={AdminStoresScreen} />
+          <Stack.Screen name="AdminRolesPage" component={AdminRolesScreen} />
+          <Stack.Screen name="AdminUsersPage" component={AdminUsersScreen} />
+        </>
       ) : (
-        // ─── DELIVERY ───────────────────────────────────────────────
+        // ─── DELIVERY ─────────────────────────────────────────────
         <Stack.Screen name="DeliveryMainTabs" component={DeliveryTabs} />
       )}
+      <Stack.Screen name="Verification" component={VerificationScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="SettingsSection" component={SettingsSectionScreen} />
     </Stack.Navigator>
   );
 };

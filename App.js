@@ -18,6 +18,13 @@ export const navigationRef = createRef();
 const SCREEN_ROUTES = {
   DeliveryOrders:  { parent: 'DeliveryMainTabs', screen: 'DeliveryOrders' },
   DeliveryProfile: { parent: 'DeliveryMainTabs', screen: 'DeliveryProfile' },
+  AdminDashboard:  { parent: 'AdminMainTabs',   screen: 'AdminDashboard' },
+  AdminOrders:     { parent: 'AdminMainTabs',   screen: 'AdminOrders' },
+  AdminProducts:   { parent: 'AdminMainTabs',   screen: 'AdminProducts' },
+  AdminCategories: { parent: 'AdminMainTabs',   screen: 'AdminCategories' },
+  AdminStores:    { parent: 'AdminMainTabs',   screen: 'AdminStores' },
+  AdminUsers:     { parent: 'AdminMainTabs',   screen: 'AdminUsers' },
+  AdminRoles:      { parent: 'AdminMainTabs',   screen: 'AdminRoles' },
 };
 
 function navigateToScreen(screenName, params = {}) {

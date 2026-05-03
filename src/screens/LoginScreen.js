@@ -65,8 +65,13 @@ const LoginScreen = ({navigation, route}) => {
     }
     if (!result.success) {
       if (result.requiresOtp) {
-        // 2FA requerido — por ahora mostrar error (se puede agregar pantalla de verificación después)
-        setLocalError('Se requiere verificación en 2 pasos. Contacta al administrador.');
+        // 2FA requerido — navegar a pantalla de verificación
+        navigation.navigate('Verification', {
+          email: result.email,
+          type: 'login',
+          otpCode: result.otpCode,
+          twoFactorType: result.twoFactorType || 'email',
+        });
       } else {
         setLocalError(result.error || 'Error al iniciar sesión');
       }
@@ -159,6 +164,13 @@ const LoginScreen = ({navigation, route}) => {
                 {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
               </Text>
             </TouchableOpacity>
+
+            <View style={styles.registerContainer}>
+              <Text style={styles.registerText}>¿No tienes cuenta? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Register')} activeOpacity={0.7}>
+                <Text style={styles.registerLink}>Regístrate</Text>
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.infoContainer}>
               <Text style={styles.infoText}>
@@ -270,9 +282,23 @@ const createStyles = (primary) => StyleSheet.create({
     fontSize: theme.fontSize.lg,
     fontWeight: '700',
   },
+  registerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: theme.spacing.lg,
+  },
+  registerText: {
+    fontSize: theme.fontSize.md,
+    color: theme.colors.textSecondary,
+  },
+  registerLink: {
+    fontSize: theme.fontSize.md,
+    fontWeight: '600',
+    color: primary,
+  },
   infoContainer: {
     alignItems: 'center',
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.md,
   },
   infoText: {
     fontSize: theme.fontSize.sm,
