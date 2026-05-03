@@ -360,6 +360,20 @@ const updateSystemConfig = async (settings) => {
   return api.put('/config', {settings});
 };
 
+// ==================== DELIVERY CONFIG (apariencia independiente) ====================
+
+const fetchDeliveryConfig = async () => {
+  const api = await createApiClient();
+  if (!api) throw new Error('No hay URL del servidor configurada');
+  return api.get('/config/delivery');
+};
+
+const updateDeliveryConfig = async (settings) => {
+  const api = await createApiClient();
+  if (!api) throw new Error('No hay URL del servidor configurada');
+  return api.put('/config/delivery', {settings});
+};
+
 // Aliases for backward compatibility
 const fetchConfig = fetchSystemConfig;
 const updateConfig = updateSystemConfig;
@@ -520,6 +534,9 @@ const apiService = {
   updateSystemConfig,
   fetchConfig,
   updateConfig,
+  // Delivery config (apariencia independiente)
+  fetchDeliveryConfig,
+  updateDeliveryConfig,
   // Banners
   uploadBanner,
   deleteBanner,

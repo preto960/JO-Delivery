@@ -9,7 +9,10 @@ const POLL_INTERVAL = 30000;
 
 export const ConfigProvider = ({children}) => {
   const [config, setConfig] = useState({
-    multi_store: 'false', // default: single store mode
+    delivery_name: 'JO-Delivery',
+    delivery_logo_url: '',
+    delivery_primary_color: '#FF6B35',
+    delivery_accent_color: '#E94560',
   });
   const [loading, setLoading] = useState(true);
   const appStateRef = useRef(AppState.currentState);
@@ -20,7 +23,7 @@ export const ConfigProvider = ({children}) => {
     try {
       // Try loading from cache first for immediate colors on reload
       try {
-        const cached = await AsyncStorage.getItem('app_config');
+        const cached = await AsyncStorage.getItem('delivery_app_config');
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed && Object.keys(parsed).length > 0) {
@@ -32,22 +35,29 @@ export const ConfigProvider = ({children}) => {
         // Ignore cache errors
       }
 
-      const data = await apiService.fetchSystemConfig();
-      // data is a flat object { multi_store: "true", ... }
+      const data = await apiService.fetchDeliveryConfig();
+      // Mapear keys de delivery a nombres legibles internos
       const newConfig = {
-        multi_store: data?.multi_store || 'false',
-        ...data,
+        delivery_name: data?.delivery_name || 'JO-Delivery',
+        delivery_logo_url: data?.delivery_logo_url || '',
+        delivery_primary_color: data?.delivery_primary_color || '#FF6B35',
+        delivery_accent_color: data?.delivery_accent_color || '#E94560',
+        // Alias para compatibilidad con componentes existentes
+        shop_name: data?.delivery_name || 'JO-Delivery',
+        shop_logo_url: data?.delivery_logo_url || '',
+        primary_color: data?.delivery_primary_color || '#FF6B35',
+        accent_color: data?.delivery_accent_color || '#E94560',
       };
       lastConfigRef.current = newConfig;
       setConfig(newConfig);
       // Persist to AsyncStorage for fast reload
       try {
-        await AsyncStorage.setItem('app_config', JSON.stringify(newConfig));
+        await AsyncStorage.setItem('delivery_app_config', JSON.stringify(newConfig));
       } catch {
         // Ignore storage errors
       }
     } catch (err) {
-      console.warn('[Config] Error loading config:', err.message);
+      console.warn('[Config] Error loading delivery config:', err.message);
     } finally {
       setLoading(false);
     }
@@ -55,20 +65,29 @@ export const ConfigProvider = ({children}) => {
 
   const updateConfig = useCallback(async (settings) => {
     try {
-      const result = await apiService.updateSystemConfig(settings);
+      // Mapear aliases a keys de delivery
+      const deliverySettings = {};
+      for (const [key, value] of Object.entries(settings)) {
+        if (key === 'shop_name') deliverySettings.delivery_name = value;
+        else if (key === 'shop_logo_url') deliverySettings.delivery_logo_url = value;
+        else if (key === 'primary_color') deliverySettings.delivery_primary_color = value;
+        else if (key === 'accent_color') deliverySettings.delivery_accent_color = value;
+        else if (key.startsWith('delivery_')) deliverySettings[key] = value;
+      }
+      const result = await apiService.updateDeliveryConfig(deliverySettings);
       // Immediately update local state
       const newConfig = {...lastConfigRef.current, ...settings};
       setConfig(prev => ({...prev, ...settings}));
       lastConfigRef.current = newConfig;
       // Persist to AsyncStorage
       try {
-        await AsyncStorage.setItem('app_config', JSON.stringify(newConfig));
+        await AsyncStorage.setItem('delivery_app_config', JSON.stringify(newConfig));
       } catch {
         // Ignore storage errors
       }
       return result;
     } catch (err) {
-      console.error('[Config] Error updating config:', err.message);
+      console.error('[Config] Error updating delivery config:', err.message);
       throw err;
     }
   }, []);

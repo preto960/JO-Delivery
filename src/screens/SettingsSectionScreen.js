@@ -26,14 +26,14 @@ import useThemeColors from '@hooks/useThemeColors';
 
 // ─── Apariencia ──────────────────────────────────────────────────────────────
 const AppearanceSection = ({primary, styles, config, updateConfig, setModal}) => {
-  const [shopName, setShopName] = useState(config.shop_name || 'JO-Shop');
+  const [shopName, setShopName] = useState(config.shop_name || 'JO-Delivery');
   const [primaryColor, setPrimaryColor] = useState(config.primary_color || '#FF6B35');
   const [accentColor, setAccentColor] = useState(config.accent_color || '#E94560');
   const [savingAppearance, setSavingAppearance] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
 
   useEffect(() => {
-    setShopName(config.shop_name || 'JO-Shop');
+    setShopName(config.shop_name || 'JO-Delivery');
     setPrimaryColor(config.primary_color || '#FF6B35');
     setAccentColor(config.accent_color || '#E94560');
   }, [config.shop_name, config.primary_color, config.accent_color]);
@@ -77,7 +77,7 @@ const AppearanceSection = ({primary, styles, config, updateConfig, setModal}) =>
           name: filename,
           type: asset.type || 'image/jpeg',
         });
-        const res = await api.post('/config/upload-logo', formData, {
+        const res = await api.post('/config/delivery/upload-logo', formData, {
           headers: {'Content-Type': 'multipart/form-data'},
           transformRequest: data => data,
         });
@@ -103,7 +103,7 @@ const AppearanceSection = ({primary, styles, config, updateConfig, setModal}) =>
       onConfirm: async () => {
         try {
           const api = await apiService.createApiClient();
-          await api.delete('/config/upload-logo');
+          await api.delete('/config/delivery/upload-logo');
           await updateConfig({shop_logo_url: ''});
         } catch (err) {
           Alert.alert('Error', 'No se pudo eliminar el logo.');
@@ -113,7 +113,7 @@ const AppearanceSection = ({primary, styles, config, updateConfig, setModal}) =>
   }, [updateConfig, setModal]);
 
   const resetAppearanceDefaults = () => {
-    setShopName('JO-Shop');
+    setShopName('JO-Delivery');
     setPrimaryColor('#FF6B35');
     setAccentColor('#E94560');
   };
@@ -126,7 +126,7 @@ const AppearanceSection = ({primary, styles, config, updateConfig, setModal}) =>
         <TextInput
           value={shopName}
           onChangeText={setShopName}
-          placeholder="JO-Shop"
+          placeholder="JO-Delivery"
           placeholderTextColor={theme.colors.textLight}
           style={styles.appearanceInput}
           autoCapitalize="words"
@@ -403,8 +403,8 @@ const AboutSection = ({primary, styles, config}) => (
     <View style={styles.aboutRow}>
       <Icon name="heart-outline" size={20} color={primary} />
       <View style={styles.aboutInfo}>
-        <Text style={styles.aboutLabel}>{config.shop_name || 'JO-Shop'}</Text>
-        <Text style={styles.aboutValue}>Tu tienda favorita</Text>
+        <Text style={styles.aboutLabel}>{config.shop_name || 'JO-Delivery'}</Text>
+        <Text style={styles.aboutValue}>Tu servicio de entrega</Text>
       </View>
     </View>
   </View>
