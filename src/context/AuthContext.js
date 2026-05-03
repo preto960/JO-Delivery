@@ -128,7 +128,7 @@ export const AuthProvider = ({children}) => {
         throw new Error('Configura la URL del servidor en Ajustes');
       }
 
-      const response = await api.post('/auth/login', {email, password});
+      const response = await api.post('/auth/login', {email, password, role: 'delivery'});
       console.log('[AuthContext] login response:', JSON.stringify(response));
 
       // Verificar si se requiere 2FA (OTP)
@@ -184,6 +184,7 @@ export const AuthProvider = ({children}) => {
         email,
         code: otpCode,
         type: verifyType,
+        role: 'delivery',
       });
       console.log('[AuthContext] loginWithOtp - response:', JSON.stringify(response));
       const {user, token, refreshToken} = response;
