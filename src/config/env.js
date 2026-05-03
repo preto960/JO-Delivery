@@ -28,7 +28,7 @@ const ENV = {
   CONNECTION_TIMEOUT: 10000,
 
   // ── Credenciales demo ──
-  DEMO_DELIVERY_EMAIL: 'delivery@joshop.com',
+  DEMO_DELIVERY_EMAIL: 'delivery@jodelivery.com',
   DEMO_DELIVERY_PASSWORD: 'Delivery123',
 
   // ── Google Maps / Places API ──

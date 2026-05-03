@@ -1,0 +1,3 @@
+#include? "Pods/TargetSupportFiles/Pods-JODelivery/Pods-JODelivery.debug.xcconfig"
+#include? "Pods/TargetSupportFiles/Pods-JODelivery/Pods-JODelivery.release.xcconfig"
+#include "Generated.xcconfig"

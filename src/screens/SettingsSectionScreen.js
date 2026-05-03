@@ -543,7 +543,7 @@ const ServerSection = ({primary, styles, setModal}) => {
       const cfg = await apiService.getApiConfig();
       const activeUrl = cfg.baseUrl || envUrl;
       setBaseUrl(activeUrl);
-      const stored = await AsyncStorage.getItem('@joshop_api_config');
+      const stored = await AsyncStorage.getItem('@jodelivery_api_config');
       const parsed = stored ? JSON.parse(stored) : null;
       setSaved(!!(parsed?.baseUrl && parsed.baseUrl.trim() !== ''));
     };

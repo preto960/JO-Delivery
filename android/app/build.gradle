@@ -20,11 +20,11 @@ react {
 }
 
 android {
-    namespace "com.joshop"
+    namespace "com.jodelivery"
     compileSdk rootProject.ext.compileSdkVersion
 
     defaultConfig {
-        applicationId "com.joshop"
+        applicationId "com.jodelivery"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

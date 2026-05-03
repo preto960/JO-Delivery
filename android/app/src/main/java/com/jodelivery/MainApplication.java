@@ -1,4 +1,4 @@
-package com.joshop;
+package com.jodelivery;
 
 import android.app.Application;
 import android.app.NotificationChannel;
@@ -13,8 +13,8 @@ import java.util.List;
 
 public class MainApplication extends Application implements ReactApplication {
 
-    private static final String CHANNEL_ID = "joshop_orders";
-    private static final String CHANNEL_NAME = "Pedidos JO-Shop";
+    private static final String CHANNEL_ID = "jodelivery_orders";
+    private static final String CHANNEL_NAME = "Pedidos JO-Delivery";
     private static final String CHANNEL_DESC = "Notificaciones de nuevos pedidos, actualizaciones y entregas";
 
     private final ReactNativeHost mReactNativeHost =

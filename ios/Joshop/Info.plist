@@ -1,3 +1,0 @@
-#include? "Pods/TargetSupportFiles/Pods-JOShop/Pods-JOShop.debug.xcconfig"
-#include? "Pods/TargetSupportFiles/Pods-JOShop/Pods-JOShop.release.xcconfig"
-#include "Generated.xcconfig"
