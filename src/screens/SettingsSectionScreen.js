@@ -1,12 +1,10 @@
-import React, {useState, useEffect, useCallback, useMemo, useRef} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Switch,
-  Linking,
   ScrollView,
   ActivityIndicator,
   Image,
@@ -226,309 +224,9 @@ const AppearanceSection = ({primary, styles, config, updateConfig, setModal}) =>
   );
 };
 
-// ─── Modo de Tienda ──────────────────────────────────────────────────────────
-const StoreModeSection = ({primary, styles, isMultiStore, updateConfig, setModal}) => {
-  const [multiStoreSwitch, setMultiStoreSwitch] = useState(isMultiStore);
-  const [switchLoading, setSwitchLoading] = useState(false);
 
-  useEffect(() => {
-    setMultiStoreSwitch(isMultiStore);
-  }, [isMultiStore]);
 
-  const handleMultiStoreToggle = async newValue => {
-    setMultiStoreSwitch(newValue);
-    setSwitchLoading(true);
-    try {
-      await updateConfig({multi_store: String(newValue)});
-    } catch (err) {
-      setMultiStoreSwitch(!newValue);
-      setModal({visible: true, type: 'alert', title: 'Error', message: 'No se pudo actualizar la configuracion.', confirmText: 'Aceptar', onConfirm: null});
-    } finally {
-      setSwitchLoading(false);
-    }
-  };
 
-  return (
-    <View style={styles.card}>
-      <View style={styles.toggleRow}>
-        <View style={styles.toggleInfo}>
-          <View style={styles.toggleIconRow}>
-            <Icon name="storefront-outline" size={22} color={primary} />
-            <Text style={styles.toggleLabel}>Multi-Tienda</Text>
-          </View>
-          <Text style={styles.toggleDescription}>
-            {multiStoreSwitch
-              ? 'Los clientes y delivery veran filtro de tienda. Los productos se asignan a tiendas especificas.'
-              : 'Modo tienda unica. No se muestra filtro de tienda ni asignacion de productos por tienda.'}
-          </Text>
-        </View>
-        <View style={styles.switchWrapper}>
-          {switchLoading ? (
-            <ActivityIndicator size="small" color={primary} />
-          ) : (
-            <Switch
-              value={multiStoreSwitch}
-              onValueChange={handleMultiStoreToggle}
-              trackColor={{false: theme.colors.border, true: primary}}
-              thumbColor={theme.colors.white}
-            />
-          )}
-        </View>
-      </View>
-      <View style={styles.modeIndicator}>
-        <View style={[styles.modeDot, multiStoreSwitch ? styles.modeDotMulti : styles.modeDotSingle]} />
-        <Text style={styles.modeText}>
-          {multiStoreSwitch ? 'Modo Multi-Tienda activado' : 'Modo Tienda Unica activado'}
-        </Text>
-      </View>
-      <Text style={styles.configHint}>
-        Los usuarios conectados detectaran el cambio automaticamente en los proximos segundos.
-      </Text>
-    </View>
-  );
-};
-
-// ─── Banners de Publicidad ───────────────────────────────────────────────────
-const BannersSection = ({primary, styles, config, updateConfig, setModal, onAddBannerReady}) => {
-  const [bannersEnabled, setBannersEnabled] = useState(
-    config.banners_enabled === 'true' || config.banners_enabled === true,
-  );
-  const [banners, setBanners] = useState([]);
-  const [bannerUploading, setBannerUploading] = useState(false);
-  const [bannersLoading, setBannersLoading] = useState(false);
-  const addBannerRef = useRef(null);
-
-  // Expose add handler to parent for the screen-level FAB
-  useEffect(() => {
-    if (onAddBannerReady) {
-      onAddBannerReady(bannersEnabled ? () => addBannerRef.current?.() : null);
-    }
-  }, [bannersEnabled, onAddBannerReady]);
-
-  const loadBanners = useCallback(async () => {
-    setBannersLoading(true);
-    try {
-      const res = await apiService.fetchAdminBanners();
-      let items = [];
-      if (Array.isArray(res)) {
-        items = res;
-      } else if (res && Array.isArray(res.data)) {
-        items = res.data;
-      } else if (res && Array.isArray(res.banners)) {
-        items = res.banners;
-      }
-      setBanners(items);
-    } catch (err) {
-      console.log('[Banners] Error loading:', err?.message || err);
-      setBanners([]);
-    } finally {
-      setBannersLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (bannersEnabled) {
-      loadBanners();
-    } else {
-      setBanners([]);
-    }
-  }, [bannersEnabled, loadBanners]);
-
-  const handleBannersToggle = async value => {
-    setBannersEnabled(value);
-    try {
-      await updateConfig({banners_enabled: String(value)});
-    } catch {
-      setBannersEnabled(!value);
-      setModal({visible: true, type: 'alert', title: 'Error', message: 'No se pudo actualizar la configuracion.', confirmText: 'Aceptar', onConfirm: null});
-    }
-  };
-
-  const handleAddBanner = useCallback(async () => {
-    try {
-      const result = await launchImageLibrary({
-        mediaType: 'mixed',
-        quality: 0.8,
-        selectionLimit: 1,
-      });
-      if (result.didCancel || !result.assets?.[0]) return;
-      const asset = result.assets[0];
-      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-        Alert.alert('Error', 'El archivo no debe superar 5MB');
-        return;
-      }
-      setBannerUploading(true);
-      try {
-        const formData = new FormData();
-        formData.append('file', {
-          uri: asset.uri,
-          name: asset.fileName || 'banner.jpg',
-          type: asset.type || 'image/jpeg',
-        });
-        await apiService.uploadBanner(formData);
-        loadBanners();
-      } catch (err) {
-        Alert.alert('Error', err?.error || err?.message || 'No se pudo subir el banner.');
-      } finally {
-        setBannerUploading(false);
-      }
-    } catch {
-      // Picker error
-    }
-  }, [loadBanners]);
-
-  // Keep ref pointing to current handler
-  useEffect(() => { addBannerRef.current = handleAddBanner; }, [handleAddBanner]);
-
-  const handleRemoveBanner = useCallback(async bannerId => {
-    try {
-      await apiService.deleteBannerById(bannerId);
-      setBanners(prev => prev.filter(b => b.id !== bannerId));
-    } catch {
-      Alert.alert('Error', 'No se pudo eliminar el banner.');
-    }
-  }, []);
-
-  const handleToggleActive = useCallback(async banner => {
-    try {
-      const formData = new FormData();
-      formData.append('active', String(!banner.active));
-      await apiService.updateBanner(banner.id, formData);
-      setBanners(prev =>
-        prev.map(b => (b.id === banner.id ? {...b, active: !b.active} : b)),
-      );
-    } catch {
-      Alert.alert('Error', 'No se pudo cambiar el estado del banner.');
-    }
-  }, []);
-
-  const handleChangeBannerImage = useCallback(async bannerId => {
-    try {
-      const result = await launchImageLibrary({
-        mediaType: 'mixed',
-        quality: 0.8,
-        selectionLimit: 1,
-      });
-      if (result.didCancel || !result.assets?.[0]) return;
-      const asset = result.assets[0];
-      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-        Alert.alert('Error', 'El archivo no debe superar 5MB');
-        return;
-      }
-      setBannerUploading(true);
-      try {
-        const formData = new FormData();
-        formData.append('file', {
-          uri: asset.uri,
-          name: asset.fileName || 'banner.jpg',
-          type: asset.type || 'image/jpeg',
-        });
-        await apiService.updateBanner(bannerId, formData);
-        loadBanners();
-      } catch {
-        Alert.alert('Error', 'No se pudo cambiar la imagen del banner.');
-      } finally {
-        setBannerUploading(false);
-      }
-    } catch {
-      // Picker error
-    }
-  }, [loadBanners]);
-
-  return (
-    <View style={{position: 'relative'}}>
-      <View style={styles.card}>
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <View style={styles.toggleIconRow}>
-              <Icon name="images-outline" size={22} color={primary} />
-              <Text style={styles.toggleLabel}>Banners activos</Text>
-            </View>
-            <Text style={styles.toggleDescription}>
-              {bannersEnabled
-                ? 'Los banners se muestran en la pagina principal de la tienda.'
-                : 'Los banners estan ocultos. Activa para mostrarlos.'}
-            </Text>
-          </View>
-          <View style={styles.switchWrapper}>
-            <Switch
-              value={bannersEnabled}
-              onValueChange={handleBannersToggle}
-              trackColor={{false: theme.colors.border, true: primary}}
-              thumbColor={theme.colors.white}
-            />
-          </View>
-        </View>
-        {bannersEnabled && (
-          <>
-            <TouchableOpacity
-              onPress={handleAddBanner}
-              disabled={bannerUploading}
-              style={[styles.addBannerBtn, bannerUploading && {opacity: 0.6}]}
-              activeOpacity={0.7}>
-              {bannerUploading ? (
-                <ActivityIndicator size="small" color={primary} />
-              ) : (
-                <Icon name="add-circle-outline" size={20} color={primary} />
-              )}
-              <Text style={styles.addBannerBtnText}>
-                {bannerUploading ? 'Subiendo banner...' : 'Agregar banner'}
-              </Text>
-            </TouchableOpacity>
-            <View style={{height: 16}} />
-            {bannersLoading ? (
-              <View style={{paddingVertical: 20, alignItems: 'center'}}>
-                <ActivityIndicator size="small" color={primary} />
-                <Text style={{marginTop: 8, fontSize: 13, color: theme.colors.textSecondary}}>Cargando banners...</Text>
-              </View>
-            ) : banners.length > 0 ? (
-              <View style={styles.bannerList}>
-                {banners.map((banner, index) => (
-                  <View key={`banner-${banner.id}`} style={styles.bannerItem}>
-                    <TouchableOpacity
-                      onPress={() => handleChangeBannerImage(banner.id)}
-                      disabled={bannerUploading}
-                      activeOpacity={0.8}
-                      style={styles.bannerThumbWrapper}>
-                      <Image source={{uri: banner.imageUrl}} style={styles.bannerThumb} resizeMode="cover" />
-                      <View style={styles.bannerThumbOverlay}>
-                        <Icon name="camera-outline" size={18} color="#FFF" />
-                      </View>
-                    </TouchableOpacity>
-                    <View style={styles.bannerItemInfo}>
-                      <Text style={styles.bannerItemLabel}>Banner #{index + 1}</Text>
-                      <Text style={styles.bannerItemUrl} numberOfLines={1}>{banner.active ? 'Activo' : 'Inactivo'}</Text>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => handleToggleActive(banner)}
-                      style={styles.bannerRemoveBtn}
-                      hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
-                      activeOpacity={0.7}>
-                      <Icon name={banner.active ? 'eye-off-outline' : 'eye-outline'} size={20} color={banner.active ? '#27AE60' : theme.colors.textSecondary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => handleRemoveBanner(banner.id)}
-                      style={styles.bannerRemoveBtn}
-                      hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
-                      activeOpacity={0.7}>
-                      <Icon name="close-circle" size={22} color="#EF4444" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View style={{paddingVertical: 16, alignItems: 'center'}}>
-                <Icon name="images-outline" size={32} color={theme.colors.textLight} />
-                <Text style={{marginTop: 8, fontSize: 13, color: theme.colors.textSecondary}}>No hay banners configurados</Text>
-              </View>
-            )}
-            <Text style={styles.logoHint}>Maximo 5MB por banner. Se muestra como carrusel en el inicio.</Text>
-          </>
-        )}
-      </View>
-    </View>
-  );
-};
 
 // ─── Servidor Backend ────────────────────────────────────────────────────────
 const ServerSection = ({primary, styles, setModal}) => {
@@ -715,8 +413,6 @@ const AboutSection = ({primary, styles, config}) => (
 // ─── Section metadata ────────────────────────────────────────────────────────
 const SECTION_META = {
   appearance: {title: 'Apariencia', icon: 'color-palette-outline', color: '#FF6B35'},
-  storeMode: {title: 'Modo de Tienda', icon: 'storefront-outline', color: '#667EEA'},
-  banners: {title: 'Banners de Publicidad', icon: 'images-outline', color: '#F5576C'},
   server: {title: 'Servidor Backend', icon: 'server-outline', color: '#4FACFE'},
   about: {title: 'Acerca de', icon: 'information-circle-outline', color: '#56AB2F'},
 };
@@ -728,9 +424,9 @@ const SettingsSectionScreen = () => {
   const {isAdmin} = useAuth();
   const {primary} = useThemeColors();
   const styles = useMemo(() => createStyles(primary), [primary]);
-  const {config, isMultiStore, updateConfig} = useConfig();
+  const {config, updateConfig} = useConfig();
   const [modal, setModal] = useState({visible: false, type: 'alert', title: '', message: '', confirmText: 'Aceptar', onConfirm: null});
-  const [bannerFabAction, setBannerFabAction] = useState(null);
+
 
   const section = route.params?.section || 'appearance';
   const meta = SECTION_META[section] || SECTION_META.appearance;
@@ -739,10 +435,6 @@ const SettingsSectionScreen = () => {
     switch (section) {
       case 'appearance':
         return <AppearanceSection primary={primary} styles={styles} config={config} updateConfig={updateConfig} setModal={setModal} />;
-      case 'storeMode':
-        return <StoreModeSection primary={primary} styles={styles} isMultiStore={isMultiStore} updateConfig={updateConfig} setModal={setModal} />;
-      case 'banners':
-        return <BannersSection primary={primary} styles={styles} config={config} updateConfig={updateConfig} setModal={setModal} onAddBannerReady={setBannerFabAction} />;
       case 'server':
         return <ServerSection primary={primary} styles={styles} setModal={setModal} />;
       case 'about':
@@ -788,31 +480,7 @@ const SettingsSectionScreen = () => {
         }}
       />
 
-      {/* Screen-level FAB for banners */}
-      {bannerFabAction && section === 'banners' && (
-        <TouchableOpacity
-          onPress={bannerFabAction}
-          style={{
-            position: 'absolute',
-            bottom: 24,
-            right: 20,
-            width: 56,
-            height: 56,
-            borderRadius: 28,
-            backgroundColor: primary,
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#000',
-            shadowOffset: {width: 0, height: 4},
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8,
-          }}
-          activeOpacity={0.85}
-          hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}>
-          <Icon name="add" size={28} color="#FFF" />
-        </TouchableOpacity>
-      )}
+
     </SafeAreaView>
   );
 };

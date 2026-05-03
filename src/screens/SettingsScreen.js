@@ -10,8 +10,6 @@ import useThemeColors from '@hooks/useThemeColors';
 
 // ─── Tarjetas de gestión (movidas del tab bar a configuración) ──────────────────
 const MANAGEMENT_CARDS = [
-  {id: 'AdminCategoriesPage', title: 'Categorias', description: 'Administrar categorias del catalogo', icon: 'folder-outline', permission: 'categories'},
-  {id: 'AdminStoresPage', title: 'Tiendas', description: 'Administrar tiendas disponibles', icon: 'storefront-outline', permission: 'stores', multiStoreOnly: true},
   {id: 'AdminRolesPage', title: 'Roles', description: 'Roles y permisos del sistema', icon: 'shield-outline', permission: 'roles'},
   {id: 'AdminUsersPage', title: 'Usuarios', description: 'Gestionar usuarios del sistema', icon: 'people-outline', adminOnly: true},
 ];
@@ -19,8 +17,6 @@ const MANAGEMENT_CARDS = [
 // ─── Tarjetas de configuración (como el settings del frontend) ───────────────
 const SETTINGS_CARDS = [
   {id: 'appearance', title: 'Apariencia', description: 'Nombre, colores, logo y tema visual', icon: 'color-palette-outline'},
-  {id: 'storeMode', title: 'Modo de Tienda', description: 'Multi-tienda o tienda unica', icon: 'business-outline'},
-  {id: 'banners', title: 'Banners de Publicidad', description: 'Banners promocionales del inicio', icon: 'images-outline'},
   {id: 'server', title: 'Servidor Backend', description: 'URL del servidor y conexion API', icon: 'server-outline'},
   {id: 'about', title: 'Acerca de', description: 'Version y datos de la aplicacion', icon: 'information-circle-outline', showToAll: true},
 ];
