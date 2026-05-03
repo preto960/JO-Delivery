@@ -16,25 +16,6 @@ import {useConfig} from '@context/ConfigContext';
 import theme from '@theme/styles';
 import useThemeColors from '@hooks/useThemeColors';
 
-const ROLE_OPTIONS = [
-  {
-    key: 'customer',
-    label: 'Cliente',
-    description: 'Comprar productos y hacer pedidos',
-    icon: 'bag-outline',
-    color: theme.colors.accent,
-    bgColor: theme.colors.accent + '15',
-  },
-  {
-    key: 'delivery',
-    label: 'Delivery',
-    description: 'Realizar entregas de pedidos',
-    icon: 'bicycle-outline',
-    color: '#1ABC9C',
-    bgColor: '#1ABC9C15',
-  },
-];
-
 const RegisterScreen = ({navigation}) => {
   const {register, isLoading, error, clearError} = useAuth();
   const {config} = useConfig();
@@ -45,7 +26,6 @@ const RegisterScreen = ({navigation}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState('delivery');
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState('');
 
@@ -61,10 +41,6 @@ const RegisterScreen = ({navigation}) => {
   const handleRegister = async () => {
     setLocalError('');
 
-    if (!selectedRole) {
-      setLocalError('Selecciona un tipo de cuenta');
-      return;
-    }
     if (!name.trim() || name.trim().length < 2) {
       setLocalError('El nombre debe tener al menos 2 caracteres');
       return;
@@ -90,7 +66,7 @@ const RegisterScreen = ({navigation}) => {
       return;
     }
 
-    const result = await register(name.trim(), email.trim().toLowerCase(), password, selectedRole);
+    const result = await register(name.trim(), email.trim().toLowerCase(), password, 'delivery');
     if (!result.success) {
       setLocalError(result.error);
     }
@@ -133,49 +109,6 @@ const RegisterScreen = ({navigation}) => {
 
           {/* Form */}
           <View style={styles.form}>
-            {/* Role Selection */}
-            <Text style={styles.label}>Tipo de cuenta</Text>
-            <View style={styles.roleContainer}>
-              {ROLE_OPTIONS.map(option => {
-                const isSelected = selectedRole === option.key;
-                return (
-                  <TouchableOpacity
-                    key={option.key}
-                    onPress={() => setSelectedRole(option.key)}
-                    style={[
-                      styles.roleCard,
-                      isSelected && {backgroundColor: option.bgColor, borderColor: option.color},
-                    ]}
-                    activeOpacity={0.7}>
-                    <View style={[
-                      styles.roleIconContainer,
-                      isSelected && {backgroundColor: option.color},
-                    ]}>
-                      <Icon
-                        name={option.icon}
-                        size={24}
-                        color={isSelected ? theme.colors.white : option.color}
-                      />
-                    </View>
-                    <Text style={[
-                      styles.roleLabel,
-                      isSelected && {color: option.color},
-                    ]}>
-                      {option.label}
-                    </Text>
-                    <Text style={styles.roleDescription} numberOfLines={2}>
-                      {option.description}
-                    </Text>
-                    {isSelected && (
-                      <View style={[styles.roleCheck, {backgroundColor: option.color}]}>
-                        <Icon name="checkmark" size={14} color={theme.colors.white} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
             <Text style={styles.label}>Nombre completo</Text>
             <View style={styles.inputContainer}>
               <Icon name="person-outline" size={20} color={theme.colors.textSecondary} />
@@ -342,55 +275,6 @@ const createStyles = (primary) => StyleSheet.create({
     fontSize: theme.fontSize.sm,
     fontWeight: '600',
     color: theme.colors.text,
-  },
-
-  // Role Selection
-  roleContainer: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
-  roleCard: {
-    flex: 1,
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    padding: theme.spacing.md,
-    alignItems: 'center',
-    position: 'relative',
-    ...theme.shadows.sm,
-  },
-  roleIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: theme.colors.inputBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  roleLabel: {
-    fontSize: theme.fontSize.md,
-    fontWeight: '700',
-    color: theme.colors.text,
-    marginBottom: 2,
-  },
-  roleDescription: {
-    fontSize: theme.fontSize.xs,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  roleCheck: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...theme.shadows.sm,
   },
 
   inputContainer: {

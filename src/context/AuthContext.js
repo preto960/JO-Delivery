@@ -211,7 +211,7 @@ export const AuthProvider = ({children}) => {
   }, [saveSession]);
 
   // Registro
-  const register = useCallback(async (name, email, password, role = 'customer') => {
+  const register = useCallback(async (name, email, password, role = 'delivery') => {
     try {
       dispatch({type: ACTIONS.SET_LOADING, payload: true});
       dispatch({type: ACTIONS.CLEAR_ERROR});
