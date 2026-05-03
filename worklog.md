@@ -195,3 +195,31 @@ Stage Summary:
 - Body is now invisible until custom theme colors are confirmed applied
 - No more visible flash of default orange color on page load
 - Safety mechanisms ensure user never gets stuck on blank screen
+---
+Task ID: 1
+Agent: Main
+Task: Create JO-Delivery app (delivery-only fork) and clean JO-Shop
+
+Work Log:
+- Explored all 3 repos architecture (backend-shop, frontend-shop, mobile)
+- Cloned mobile repo as JO-Delivery
+- Removed non-delivery screens (Home, Cart, ProductDetail, MyOrders, OrderConfirmation, all Admin screens, Register, Settings, Verification)
+- Removed non-delivery components (CartItem, ProductCard, Header) and contexts (CartContext)
+- Updated app.json, package.json names to JO-Delivery/JODelivery
+- Updated App.js: removed CartProvider, removed guest/customer/admin SCREEN_ROUTES, simplified to Login + DeliveryTabs only
+- Rewrote AppNavigator.js: only Login screen + DeliveryTabs (Entregas + Perfil)
+- Updated LoginScreen: removed Register link, GuestTabs link, added delivery-specific icon (bicycle), updated storage keys
+- Simplified api.js: only auth + orders + notifications + config + banners + addresses endpoints
+- Updated ThemeLoader default to JD initials
+- Updated env.js APP_NAME to JO-Delivery
+- Updated index.js for JO-Delivery
+- Namespaced AsyncStorage keys to @jodelivery_*
+- Cleaned JO-Shop (mobile): removed DeliveryOrdersScreen, DeliveryTabs, delivery SCREEN_ROUTES, delivery API endpoints
+- Pushed both repos to GitHub
+
+Stage Summary:
+- JO-Delivery: Pushed to github.com/preto960/JO-Delivery (commit af7b3c8)
+- JO-Shop: Pushed delivery removal commit 3a2504f to github.com/preto960/JO-Shop
+- JO-Delivery is now a standalone delivery-only app
+- JO-Shop no longer contains delivery functionality
+
