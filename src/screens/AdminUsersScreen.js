@@ -119,6 +119,7 @@ const AdminUsersScreen = () => {
           page: pageNum,
           limit: PAGE_LIMIT,
           search: searchQuery || undefined,
+          role: 'delivery',
         });
 
         const items = Array.isArray(res) ? res : res.data || [];
@@ -275,11 +276,15 @@ const AdminUsersScreen = () => {
   }, []);
 
   const toggleEditRole = useCallback(roleId => {
-    setEditForm(prev => ({
-      ...prev,
-      selectedRoleIds: prev.selectedRoleIds.includes(roleId) ? [] : [roleId],
-      selectedStoreIds: [],
-    }));
+    setEditForm(prev => {
+      if (prev.selectedRoleIds.includes(roleId)) {
+        return { ...prev, selectedRoleIds: prev.selectedRoleIds.filter(id => id !== roleId), selectedStoreIds: [] };
+      }
+      if (prev.selectedRoleIds.length >= 2) {
+        return { ...prev, selectedRoleIds: [...prev.selectedRoleIds.slice(1), roleId], selectedStoreIds: [] };
+      }
+      return { ...prev, selectedRoleIds: [...prev.selectedRoleIds, roleId], selectedStoreIds: [] };
+    });
   }, []);
 
   // ─── Save User (phone, birthdate, active) ───────────────────────────────
@@ -1200,8 +1205,8 @@ const AdminUsersScreen = () => {
                           <Icon
                             name={
                               isSelected
-                                ? 'radio-button-on'
-                                : 'radio-button-off'
+                                ? 'checkbox'
+                                : 'square-outline'
                             }
                             size={20}
                             color={
@@ -1473,11 +1478,15 @@ const AdminUsersScreen = () => {
   }, []);
 
   const toggleCreateRole = useCallback(roleId => {
-    setCreateForm(prev => ({
-      ...prev,
-      selectedRoleIds: prev.selectedRoleIds.includes(roleId) ? [] : [roleId],
-      selectedStoreIds: [],
-    }));
+    setCreateForm(prev => {
+      if (prev.selectedRoleIds.includes(roleId)) {
+        return { ...prev, selectedRoleIds: prev.selectedRoleIds.filter(id => id !== roleId), selectedStoreIds: [] };
+      }
+      if (prev.selectedRoleIds.length >= 2) {
+        return { ...prev, selectedRoleIds: [...prev.selectedRoleIds.slice(1), roleId], selectedStoreIds: [] };
+      }
+      return { ...prev, selectedRoleIds: [...prev.selectedRoleIds, roleId], selectedStoreIds: [] };
+    });
   }, []);
 
   const handleCreateUser = useCallback(async () => {
