@@ -1179,14 +1179,14 @@ const AdminUsersScreen = () => {
                 Formato: año-mes-día (ej. 1990-05-15)
               </Text>
 
-              {/* Roles selection with radio buttons (single select) */}
+              {/* Roles selection - checkbox max 2 */}
               {availableRoles.length > 0 && (
                 <View style={styles.createSection}>
                   <Text style={styles.editSectionTitle}>
-                    Rol
+                    Roles (max. 2)
                   </Text>
                   <Text style={styles.editSectionDescription}>
-                    Selecciona un rol
+                    Selecciona hasta 2 roles
                   </Text>
                   <View style={styles.createRoleCheckWrap}>
                     {availableRoles.map(role => {
@@ -1650,14 +1650,14 @@ const AdminUsersScreen = () => {
                   autoCorrect={false}
                 />
 
-                {/* Roles selection */}
+                {/* Roles selection - checkbox max 2 */}
                 {availableRoles.length > 0 && (
                   <View style={styles.createSection}>
                     <Text style={styles.editSectionTitle}>
-                      Rol
+                      Roles (max. 2)
                     </Text>
                     <Text style={styles.editSectionDescription}>
-                      Selecciona un rol
+                      Selecciona hasta 2 roles
                     </Text>
                     <View style={styles.createRoleCheckWrap}>
                       {availableRoles.map(role => {
@@ -1676,8 +1676,8 @@ const AdminUsersScreen = () => {
                             <Icon
                               name={
                                 isSelected
-                                  ? 'radio-button-on'
-                                  : 'radio-button-off'
+                                  ? 'checkbox'
+                                  : 'square-outline'
                               }
                               size={20}
                               color={
