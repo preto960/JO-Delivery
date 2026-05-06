@@ -13,6 +13,7 @@ import {
   PermissionsAndroid,
   Animated,
   DeviceEventEmitter,
+  Switch,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useRoute, useIsFocused} from '@react-navigation/native';
@@ -212,6 +213,42 @@ const DeliveryOrdersScreen = () => {
 
   // Online status
   const isDeliveryOnline = user?.isOnline || false;
+  const [localOnline, setLocalOnline] = useState(isDeliveryOnline);
+  const [onlineLoading, setOnlineLoading] = useState(false);
+
+  // Sincronizar con el user del contexto
+  useEffect(() => {
+    if (user?.isOnline !== undefined) {
+      setLocalOnline(user.isOnline);
+    }
+  }, [user?.isOnline]);
+
+  const handleToggleOnline = useCallback(async (value) => {
+    if (onlineLoading) return;
+
+    if (!value) {
+      setConfirmModal({
+        visible: true, type: 'danger', title: 'Desconectarse',
+        message: 'Si te desconectas, no recibirás notificaciones de nuevos pedidos.',
+        confirmText: 'Desconectarse',
+        onConfirm: () => {
+          setConfirmModal({visible: false, type: 'confirm', title: '', message: '', confirmText: 'Aceptar', onConfirm: null});
+          setOnlineLoading(true);
+          apiService.updateOnlineStatus(false)
+            .then(() => { setLocalOnline(false); })
+            .catch(() => { setLocalOnline(true); })
+            .finally(() => { setOnlineLoading(false); });
+        },
+      });
+      return;
+    }
+
+    setOnlineLoading(true);
+    apiService.updateOnlineStatus(true)
+      .then(() => { setLocalOnline(true); })
+      .catch(() => { setLocalOnline(false); })
+      .finally(() => { setOnlineLoading(false); });
+  }, [onlineLoading]);
 
   // Data state
   const [orders, setOrders] = useState([]);
@@ -1116,21 +1153,32 @@ const DeliveryOrdersScreen = () => {
         </View>
       </View>
 
-      {/* Online Status Banner */}
-      {!isDeliveryOnline && (
-        <View style={styles.offlineBanner}>
-          <Icon name="cloud-offline-outline" size={16} color="#FF9800" />
-          <Text style={styles.offlineBannerText}>
-            Estas desconectado. Conectate para recibir pedidos nuevos.
+      {/* Online Status Toggle (sutil en header) */}
+      <View style={[
+        styles.onlineBar,
+        localOnline ? styles.onlineBarOn : styles.onlineBarOff,
+      ]}>
+        <View style={styles.onlineBarInfo}>
+          <View style={[
+            styles.onlineBarDot,
+            localOnline ? styles.onlineBarDotOn : styles.onlineBarDotOff,
+          ]} />
+          <Text style={[
+            styles.onlineBarText,
+            localOnline ? styles.onlineBarTextOn : styles.onlineBarTextOff,
+          ]}>
+            {localOnline ? 'En linea' : 'Desconectado'}
           </Text>
-          <TouchableOpacity
-            style={styles.offlineBannerBtn}
-            onPress={() => navigation.navigate('DeliveryProfile')}
-            activeOpacity={0.7}>
-            <Text style={styles.offlineBannerBtnText}>Conectarse</Text>
-          </TouchableOpacity>
         </View>
-      )}
+        <Switch
+          value={localOnline}
+          onValueChange={handleToggleOnline}
+          disabled={onlineLoading}
+          trackColor={{false: '#D1D5DB', true: '#4CAF50'}}
+          thumbColor={onlineLoading ? '#F5F5F5' : theme.colors.white}
+          ios_backgroundColor="#D1D5DB"
+        />
+      </View>
 
       {/* Filter Tabs */}
       {renderFilterTabs()}
@@ -1703,32 +1751,48 @@ const createStyles = (primary) => StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.white,
   },
-  // ─── Offline Banner ─────────────────────────────────────────────────
-  offlineBanner: {
+  // ─── Online Status Bar ─────────────────────────────────────────────────
+  onlineBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF3E0',
-    paddingHorizontal: theme.spacing.md,
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FFE0B2',
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    borderRadius: theme.borderRadius.lg,
   },
-  offlineBannerText: {
-    flex: 1,
-    fontSize: theme.fontSize.sm,
-    color: '#E65100',
-    marginLeft: theme.spacing.sm,
+  onlineBarOn: {
+    backgroundColor: '#E8F5E9',
   },
-  offlineBannerBtn: {
+  onlineBarOff: {
+    backgroundColor: '#FFF3E0',
+  },
+  onlineBarInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  onlineBarDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  onlineBarDotOn: {
+    backgroundColor: '#4CAF50',
+  },
+  onlineBarDotOff: {
     backgroundColor: '#FF9800',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 6,
-    borderRadius: theme.borderRadius.md,
   },
-  offlineBannerBtnText: {
-    color: theme.colors.white,
-    fontSize: theme.fontSize.xs,
+  onlineBarText: {
+    fontSize: theme.fontSize.sm,
     fontWeight: '600',
+  },
+  onlineBarTextOn: {
+    color: '#2E7D32',
+  },
+  onlineBarTextOff: {
+    color: '#E65100',
   },
 });
 

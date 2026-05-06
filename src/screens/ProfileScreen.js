@@ -640,21 +640,26 @@ const ProfileScreen = () => {
         title: 'Desconectarse',
         message: 'Si te desconectas, no recibirás notificaciones de nuevos pedidos. ¿Seguro que deseas desconectarte?',
         confirmText: 'Desconectarse',
-        onConfirm: async () => {
+        onConfirm: () => {
+          // Cerrar modal primero
+          setModal({visible: false, type: 'alert', title: '', message: '', confirmText: 'Aceptar', onConfirm: null});
+          // Ejecutar la desconexion
           setOnlineLoading(true);
-          try {
-            await apiService.updateOnlineStatus(false);
-            setIsOnline(false);
-            await AsyncStorage.setItem(ONLINE_STATUS_KEY, JSON.stringify(false));
-          } catch (err) {
-            setModal({
-              visible: true, type: 'alert', title: 'Error',
-              message: err.message || 'No se pudo cambiar el estado.',
-              confirmText: 'Aceptar', onConfirm: null,
+          apiService.updateOnlineStatus(false)
+            .then(() => {
+              setIsOnline(false);
+              AsyncStorage.setItem(ONLINE_STATUS_KEY, JSON.stringify(false));
+            })
+            .catch((err) => {
+              setModal({
+                visible: true, type: 'alert', title: 'Error',
+                message: err.message || 'No se pudo cambiar el estado.',
+                confirmText: 'Aceptar', onConfirm: null,
+              });
+            })
+            .finally(() => {
+              setOnlineLoading(false);
             });
-          } finally {
-            setOnlineLoading(false);
-          }
         },
       });
       return;
