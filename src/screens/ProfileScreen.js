@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useCallback, useRef, useMemo} from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -13,6 +14,7 @@ import {
   Platform,
   Image,
   Share,
+  Switch,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -92,6 +94,11 @@ const ProfileScreen = () => {
     onConfirm: null,
   });
 
+  // Online/Offline status state (delivery only)
+  const [isOnline, setIsOnline] = useState(user?.isOnline || false);
+  const [onlineLoading, setOnlineLoading] = useState(false);
+  const ONLINE_STATUS_KEY = '@jodelivery_online_status';
+
   const isStaff = hasRole('admin') || hasRole('editor');
   const isCustomer = hasRole('customer');
   const isDeliveryRole = hasRole('delivery');
@@ -139,6 +146,30 @@ const ProfileScreen = () => {
       setTwoFactorEnabled(user.twoFactorEnabled);
     }
   }, [user?.twoFactorEnabled]);
+
+  // Sincronizar isOnline cuando se actualiza el perfil
+  useEffect(() => {
+    if (user?.isOnline !== undefined) {
+      setIsOnline(user.isOnline);
+    }
+  }, [user?.isOnline]);
+
+  // Cargar estado online guardado localmente al montar (delivery)
+  useEffect(() => {
+    if (isDeliveryRole) {
+      AsyncStorage.getItem(ONLINE_STATUS_KEY).then(stored => {
+        if (stored !== null) {
+          const parsed = JSON.parse(stored);
+          // Si el servidor dice algo diferente, sincronizar
+          if (user?.isOnline !== undefined && user.isOnline !== parsed) {
+            setIsOnline(user.isOnline);
+          } else {
+            setIsOnline(parsed);
+          }
+        }
+      }).catch(() => {});
+    }
+  }, [isDeliveryRole]);
 
   // ─── 2FA: 3-Step Flow (idle → confirming → verifying) ──────────────
 
@@ -596,6 +627,56 @@ const ProfileScreen = () => {
     [],
   );
 
+  // ─── Online/Offline Toggle ──────────────────────────────────────────────
+
+  const handleToggleOnline = useCallback(async (value) => {
+    if (onlineLoading) return;
+
+    // Si está desconectando, mostrar confirmación
+    if (!value) {
+      setModal({
+        visible: true,
+        type: 'danger',
+        title: 'Desconectarse',
+        message: 'Si te desconectas, no recibirás notificaciones de nuevos pedidos. ¿Seguro que deseas desconectarte?',
+        confirmText: 'Desconectarse',
+        onConfirm: async () => {
+          setOnlineLoading(true);
+          try {
+            await apiService.updateOnlineStatus(false);
+            setIsOnline(false);
+            await AsyncStorage.setItem(ONLINE_STATUS_KEY, JSON.stringify(false));
+          } catch (err) {
+            setModal({
+              visible: true, type: 'alert', title: 'Error',
+              message: err.message || 'No se pudo cambiar el estado.',
+              confirmText: 'Aceptar', onConfirm: null,
+            });
+          } finally {
+            setOnlineLoading(false);
+          }
+        },
+      });
+      return;
+    }
+
+    // Conectarse directamente
+    setOnlineLoading(true);
+    try {
+      await apiService.updateOnlineStatus(true);
+      setIsOnline(true);
+      await AsyncStorage.setItem(ONLINE_STATUS_KEY, JSON.stringify(true));
+    } catch (err) {
+      setModal({
+        visible: true, type: 'alert', title: 'Error',
+        message: err.message || 'No se pudo cambiar el estado.',
+        confirmText: 'Aceptar', onConfirm: null,
+      });
+    } finally {
+      setOnlineLoading(false);
+    }
+  }, [onlineLoading]);
+
   // ─── Logout ────────────────────────────────────────────────────────────
 
   const handleLogout = () => {
@@ -704,6 +785,42 @@ const ProfileScreen = () => {
             ))}
           </View>
         </View>
+
+        {/* Online/Offline Toggle (solo delivery) */}
+        {isDeliveryRole && (
+          <View style={[
+            styles.onlineStatusCard,
+            isOnline ? styles.onlineStatusCardOn : styles.onlineStatusCardOff,
+          ]}>
+            <View style={styles.onlineStatusInfo}>
+              <View style={[
+                styles.onlineStatusDot,
+                isOnline ? styles.onlineStatusDotOn : styles.onlineStatusDotOff,
+              ]} />
+              <View style={styles.onlineStatusTextWrap}>
+                <Text style={[
+                  styles.onlineStatusLabel,
+                  isOnline ? styles.onlineStatusLabelOn : styles.onlineStatusLabelOff,
+                ]}>
+                  {isOnline ? 'Conectado' : 'Desconectado'}
+                </Text>
+                <Text style={styles.onlineStatusDesc}>
+                  {isOnline
+                    ? 'Estas recibiendo notificaciones de nuevos pedidos'
+                    : 'No recibirás notificaciones de nuevos pedidos'}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={isOnline}
+              onValueChange={handleToggleOnline}
+              disabled={onlineLoading}
+              trackColor={{false: '#D1D5DB', true: '#4CAF50'}}
+              thumbColor={onlineLoading ? '#F5F5F5' : theme.colors.white}
+              ios_backgroundColor="#D1D5DB"
+            />
+          </View>
+        )}
 
         {/* Tiendas asignadas (solo lectura, cuando multi-store activo) */}
         {isMultiStore && user?.stores && user.stores.length > 0 && (
@@ -2510,6 +2627,60 @@ const createStyles = (primary) => StyleSheet.create({
     fontSize: theme.fontSize.xs,
     color: theme.colors.success,
     fontWeight: '600',
+  },
+  // ─── Online/Offline Status ────────────────────────────────────────────
+  onlineStatusCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    marginTop: theme.spacing.md,
+  },
+  onlineStatusCardOn: {
+    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: '#4CAF5033',
+  },
+  onlineStatusCardOff: {
+    backgroundColor: '#FFF3E0',
+    borderWidth: 1,
+    borderColor: '#FF980033',
+  },
+  onlineStatusInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  onlineStatusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: theme.spacing.sm,
+  },
+  onlineStatusDotOn: {
+    backgroundColor: '#4CAF50',
+  },
+  onlineStatusDotOff: {
+    backgroundColor: '#FF9800',
+  },
+  onlineStatusTextWrap: {
+    flex: 1,
+  },
+  onlineStatusLabel: {
+    fontSize: theme.fontSize.md,
+    fontWeight: '600',
+  },
+  onlineStatusLabelOn: {
+    color: '#2E7D32',
+  },
+  onlineStatusLabelOff: {
+    color: '#E65100',
+  },
+  onlineStatusDesc: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
 });
 

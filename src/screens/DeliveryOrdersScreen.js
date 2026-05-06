@@ -210,6 +210,9 @@ const DeliveryOrdersScreen = () => {
   const {primary} = useThemeColors();
   const styles = useMemo(() => createStyles(primary), [primary]);
 
+  // Online status
+  const isDeliveryOnline = user?.isOnline || false;
+
   // Data state
   const [orders, setOrders] = useState([]);
   const [activeTab, setActiveTab] = useState('available');
@@ -1113,6 +1116,22 @@ const DeliveryOrdersScreen = () => {
         </View>
       </View>
 
+      {/* Online Status Banner */}
+      {!isDeliveryOnline && (
+        <View style={styles.offlineBanner}>
+          <Icon name="cloud-offline-outline" size={16} color="#FF9800" />
+          <Text style={styles.offlineBannerText}>
+            Estas desconectado. Conectate para recibir pedidos nuevos.
+          </Text>
+          <TouchableOpacity
+            style={styles.offlineBannerBtn}
+            onPress={() => navigation.navigate('DeliveryProfile')}
+            activeOpacity={0.7}>
+            <Text style={styles.offlineBannerBtnText}>Conectarse</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Filter Tabs */}
       {renderFilterTabs()}
 
@@ -1683,6 +1702,33 @@ const createStyles = (primary) => StyleSheet.create({
     fontSize: theme.fontSize.md,
     fontWeight: '700',
     color: theme.colors.white,
+  },
+  // ─── Offline Banner ─────────────────────────────────────────────────
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFE0B2',
+  },
+  offlineBannerText: {
+    flex: 1,
+    fontSize: theme.fontSize.sm,
+    color: '#E65100',
+    marginLeft: theme.spacing.sm,
+  },
+  offlineBannerBtn: {
+    backgroundColor: '#FF9800',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 6,
+    borderRadius: theme.borderRadius.md,
+  },
+  offlineBannerBtnText: {
+    color: theme.colors.white,
+    fontSize: theme.fontSize.xs,
+    fontWeight: '600',
   },
 });
 

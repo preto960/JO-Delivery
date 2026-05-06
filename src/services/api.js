@@ -450,6 +450,12 @@ const deleteStore = async (storeId) => {
 
 // ==================== PRODUCT BATCHES CRUD ====================
 
+const updateOnlineStatus = async (isOnline) => {
+  const api = await createApiClient();
+  if (!api) throw new Error('No hay URL del servidor configurada');
+  return api.patch('/auth/profile/status', {isOnline});
+};
+
 const fetchBatches = async (params = {}) => {
   const api = await createApiClient();
   if (!api) throw new Error('No hay URL del servidor configurada');
@@ -555,6 +561,8 @@ const apiService = {
   createBatch,
   updateBatch,
   deleteBatch,
+  // Online status
+  updateOnlineStatus,
 };
 
 export default apiService;
