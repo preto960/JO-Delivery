@@ -163,6 +163,11 @@ export const AuthProvider = ({children}) => {
         payload: {user, token, refreshToken},
       });
 
+      // Refrescar perfil completo del servidor (incluye isOnline, permisos, etc.)
+      setTimeout(() => {
+        fetchProfileRef.current?.();
+      }, 100);
+
       return {success: true};
     } catch (err) {
       console.log('[AuthContext] login error:', err.message, err.response?.data);
@@ -205,6 +210,11 @@ export const AuthProvider = ({children}) => {
         type: ACTIONS.LOGIN,
         payload: {user, token, refreshToken},
       });
+
+      // Refrescar perfil completo del servidor (incluye isOnline, permisos, etc.)
+      setTimeout(() => {
+        fetchProfileRef.current?.();
+      }, 100);
 
       return {success: true};
     } catch (err) {
