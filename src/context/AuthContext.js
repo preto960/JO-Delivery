@@ -93,6 +93,9 @@ export const AuthProvider = ({children}) => {
   }, []);
 
   // Restaurar sesión al iniciar
+  // Ref para fetchProfile estable antes de que se use en restoreSession
+  const fetchProfileRef = useRef(null);
+
   useEffect(() => {
     const restoreSession = async () => {
       try {
@@ -107,6 +110,13 @@ export const AuthProvider = ({children}) => {
               refreshToken: parsed.refreshToken,
             },
           });
+          // Refrescar perfil del servidor para obtener el estado mas reciente (ej: isOnline)
+          if (parsed.token) {
+            // Se ejecuta despues del dispatch para que el token este disponible
+            setTimeout(() => {
+              fetchProfileRef.current?.();
+            }, 100);
+          }
         } else {
           dispatch({type: ACTIONS.SET_RESTORING, payload: false});
         }
@@ -294,6 +304,11 @@ export const AuthProvider = ({children}) => {
       });
     } catch {}
   }, [state.token, state.refreshToken, saveSession]);
+
+  // Mantener ref actualizado para usarlo en restoreSession
+  useEffect(() => {
+    fetchProfileRef.current = fetchProfile;
+  }, [fetchProfile]);
 
   // Actualizar token en headers del apiService
   useEffect(() => {

@@ -207,7 +207,7 @@ const DeliveryOrdersScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const isFocused = useIsFocused();
-  const {user, logout} = useAuth();
+  const {user, logout, fetchProfile} = useAuth();
   const {primary} = useThemeColors();
   const styles = useMemo(() => createStyles(primary), [primary]);
 
@@ -235,7 +235,11 @@ const DeliveryOrdersScreen = () => {
           setConfirmModal({visible: false, type: 'confirm', title: '', message: '', confirmText: 'Aceptar', onConfirm: null});
           setOnlineLoading(true);
           apiService.updateOnlineStatus(false)
-            .then(() => { setLocalOnline(false); })
+            .then(async () => {
+              setLocalOnline(false);
+              // Sincronizar con el contexto de auth
+              await fetchProfile();
+            })
             .catch(() => { setLocalOnline(true); })
             .finally(() => { setOnlineLoading(false); });
         },
@@ -245,14 +249,16 @@ const DeliveryOrdersScreen = () => {
 
     setOnlineLoading(true);
     apiService.updateOnlineStatus(true)
-      .then(() => {
+      .then(async () => {
         setLocalOnline(true);
         // Al conectarse, auto-seleccionar tab Disponibles
         setActiveTab('available');
+        // Sincronizar con el contexto de auth
+        await fetchProfile();
       })
       .catch(() => { setLocalOnline(false); })
       .finally(() => { setOnlineLoading(false); });
-  }, [onlineLoading]);
+  }, [onlineLoading, fetchProfile]);
 
   // Data state
   const [orders, setOrders] = useState([]);
@@ -327,6 +333,12 @@ const DeliveryOrdersScreen = () => {
         }
         setError(null);
 
+        // Si esta desconectado, no consultar pedidos
+        if (!localOnline) {
+          setOrders([]);
+          return;
+        }
+
         let data;
         if (activeTab === 'available') {
           // Pedidos disponibles (sin asignar)
@@ -375,7 +387,7 @@ const DeliveryOrdersScreen = () => {
         setRefreshing(false);
       }
     },
-    [activeTab, user?.id],
+    [activeTab, user?.id, localOnline],
   );
 
   // Carga inicial con pantalla completa, cambios de tab solo refrescan datos
@@ -683,6 +695,21 @@ const DeliveryOrdersScreen = () => {
   const renderEmpty = useCallback(() => {
     if (loading) return null;
 
+    // Si esta desconectado, mostrar mensaje para conectarse
+    if (!localOnline) {
+      return (
+        <View style={styles.emptyContainer}>
+          <View style={styles.offlineEmptyIcon}>
+            <Icon name="wifi-outline" size={48} color="#FF9800" />
+          </View>
+          <Text style={styles.emptyTitle}>Desconectado</Text>
+          <Text style={styles.emptyText}>
+            Conectate para ver y aceptar pedidos disponibles.
+          </Text>
+        </View>
+      );
+    }
+
     if (error) {
       return (
         <View style={styles.emptyContainer}>
@@ -726,7 +753,7 @@ const DeliveryOrdersScreen = () => {
         )}
       </View>
     );
-  }, [loading, error, activeTab, loadOrders]);
+  }, [loading, error, activeTab, loadOrders, localOnline]);
 
   // ─── Render: Order Card ──────────────────────────────────────────────────
 
@@ -844,9 +871,14 @@ const DeliveryOrdersScreen = () => {
             <View style={styles.actionButtonsRow}>
               {item.address && activeTab === 'available' && (
                 <TouchableOpacity
-                  style={[styles.actionButton, styles.mapButton]}
+                  style={[
+                    styles.actionButton,
+                    styles.mapButton,
+                    !localOnline && styles.actionButtonDisabled,
+                  ]}
                   onPress={() => handleOpenMap(item.address)}
-                  activeOpacity={0.8}>
+                  disabled={!localOnline}
+                  activeOpacity={localOnline ? 0.8 : 1}>
                   <Icon name="map-outline" size={16} color={theme.colors.white} />
                   <Text style={styles.actionButtonText}>Mapa</Text>
                 </TouchableOpacity>
@@ -854,11 +886,15 @@ const DeliveryOrdersScreen = () => {
 
               {activeTab === 'available' && item.status !== 'shipped' && (
                 <TouchableOpacity
-                  style={[styles.actionButton, styles.acceptButton]}
+                  style={[
+                    styles.actionButton,
+                    styles.acceptButton,
+                    !localOnline && styles.actionButtonDisabled,
+                  ]}
                   onPress={() => handleAcceptOrder(item)}
-                  disabled={isActing}
-                  activeOpacity={0.8}>
-                  {isActing ? (
+                  disabled={isActing || !localOnline}
+                  activeOpacity={localOnline ? 0.8 : 1}>
+                  {(isActing || !localOnline) ? (
                     <ActivityIndicator size="small" color={theme.colors.white} />
                   ) : (
                     <>
@@ -871,11 +907,15 @@ const DeliveryOrdersScreen = () => {
 
             {item.status === 'shipped' && item.deliveryId === user?.id && (
               <TouchableOpacity
-                style={[styles.actionButton, styles.deliverButton]}
+                style={[
+                  styles.actionButton,
+                  styles.deliverButton,
+                  !localOnline && styles.actionButtonDisabled,
+                ]}
                 onPress={() => handleMarkDelivered(item)}
-                disabled={isActing}
-                activeOpacity={0.8}>
-                {isActing ? (
+                disabled={isActing || !localOnline}
+                activeOpacity={localOnline ? 0.8 : 1}>
+                {(isActing || !localOnline) ? (
                   <ActivityIndicator size="small" color={theme.colors.white} />
                 ) : (
                   <>
@@ -905,7 +945,7 @@ const DeliveryOrdersScreen = () => {
         </Animated.View>
       );
     },
-    [actionLoading, handleAcceptOrder, handleMarkDelivered, activeTab, user?.id, handleOpenMap, highlightOrderId, pulseAnim],
+    [actionLoading, handleAcceptOrder, handleMarkDelivered, activeTab, user?.id, handleOpenMap, highlightOrderId, pulseAnim, localOnline],
   );
 
   // ─── Render: Filter Tabs ─────────────────────────────────────────────────
@@ -1373,6 +1413,14 @@ const createStyles = (primary) => StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing.xxl,
   },
+  offlineEmptyIcon: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#FFF3E0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   emptyTitle: {
     fontSize: theme.fontSize.lg,
     fontWeight: '600',
@@ -1550,6 +1598,9 @@ const createStyles = (primary) => StyleSheet.create({
     fontSize: theme.fontSize.sm,
     fontWeight: '600',
     color: theme.colors.white,
+  },
+  actionButtonDisabled: {
+    opacity: 0.4,
   },
   deliveredBadge: {
     width: 36,
