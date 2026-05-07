@@ -1469,7 +1469,7 @@ const createStyles = (primary) => StyleSheet.create({
     backgroundColor: theme.colors.inputBg,
   },
   tabActive: {
-    backgroundColor: primary,
+    backgroundColor: '#4CAF50',
   },
   tabLabel: {
     fontSize: theme.fontSize.sm,
@@ -1478,6 +1478,7 @@ const createStyles = (primary) => StyleSheet.create({
   },
   tabLabelActive: {
     color: theme.colors.white,
+    fontWeight: '600',
   },
   tabDisabled: {
     backgroundColor: theme.colors.inputBg,
