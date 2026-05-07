@@ -245,7 +245,11 @@ const DeliveryOrdersScreen = () => {
 
     setOnlineLoading(true);
     apiService.updateOnlineStatus(true)
-      .then(() => { setLocalOnline(true); })
+      .then(() => {
+        setLocalOnline(true);
+        // Al conectarse, auto-seleccionar tab Disponibles
+        setActiveTab('available');
+      })
       .catch(() => { setLocalOnline(false); })
       .finally(() => { setOnlineLoading(false); });
   }, [onlineLoading]);
@@ -374,8 +378,16 @@ const DeliveryOrdersScreen = () => {
     [activeTab, user?.id],
   );
 
+  // Carga inicial con pantalla completa, cambios de tab solo refrescan datos
+  const initialLoadDone = useRef(false);
+
   useEffect(() => {
-    loadOrders();
+    if (!initialLoadDone.current) {
+      initialLoadDone.current = true;
+      loadOrders(); // Carga inicial: muestra loading screen completo
+    } else {
+      loadOrders(true); // Cambios de tab: solo refresh spinner en datos
+    }
   }, [loadOrders]);
 
   // Manejar params de notificacion: highlightOrderId
@@ -899,6 +911,7 @@ const DeliveryOrdersScreen = () => {
   // ─── Render: Filter Tabs ─────────────────────────────────────────────────
 
   const renderFilterTabs = useCallback(() => {
+    const isOffline = !localOnline;
     return (
       <View style={styles.tabsContainer}>
         {FILTER_TABS.map(tab => {
@@ -906,11 +919,22 @@ const DeliveryOrdersScreen = () => {
           return (
             <TouchableOpacity
               key={tab.key}
-              style={[styles.tab, isActive && styles.tabActive]}
-              onPress={() => handleTabChange(tab.key)}
-              activeOpacity={0.7}>
+              style={[
+                styles.tab,
+                isActive && styles.tabActive,
+                isOffline && styles.tabDisabled,
+              ]}
+              onPress={() => {
+                if (isOffline) return;
+                handleTabChange(tab.key);
+              }}
+              activeOpacity={isOffline ? 1 : 0.7}>
               <Text
-                style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+                style={[
+                  styles.tabLabel,
+                  isActive && styles.tabLabelActive,
+                  isOffline && styles.tabLabelDisabled,
+                ]}>
                 {tab.label}
               </Text>
             </TouchableOpacity>
@@ -918,7 +942,7 @@ const DeliveryOrdersScreen = () => {
         })}
       </View>
     );
-  }, [activeTab, handleTabChange]);
+  }, [activeTab, handleTabChange, localOnline]);
 
   // ─── Render: Native Map Modal ────────────────────────────────────────────
 
@@ -1183,6 +1207,16 @@ const DeliveryOrdersScreen = () => {
       {/* Filter Tabs */}
       {renderFilterTabs()}
 
+      {/* Offline hint banner */}
+      {!localOnline && (
+        <View style={styles.offlineBanner}>
+          <Icon name="information-circle-outline" size={14} color="#E65100" />
+          <Text style={styles.offlineBannerText}>
+            Conectate para ver y aceptar pedidos
+          </Text>
+        </View>
+      )}
+
       {/* Orders List */}
       <FlatList
         ref={flatListRef}
@@ -1311,6 +1345,13 @@ const createStyles = (primary) => StyleSheet.create({
   },
   tabLabelActive: {
     color: theme.colors.white,
+  },
+  tabDisabled: {
+    backgroundColor: theme.colors.inputBg,
+    opacity: 0.5,
+  },
+  tabLabelDisabled: {
+    color: theme.colors.textLight,
   },
 
   // List
@@ -1751,6 +1792,20 @@ const createStyles = (primary) => StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.white,
   },
+  // ─── Offline Overlay Banner ──────────────────────────────────────────
+  offlineBanner: {
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.xs,
+    alignItems: 'center',
+    gap: 6,
+  },
+  offlineBannerText: {
+    fontSize: theme.fontSize.xs,
+    color: '#E65100',
+    fontWeight: '500',
+  },
+
   // ─── Online Status Bar ─────────────────────────────────────────────────
   onlineBar: {
     flexDirection: 'row',
