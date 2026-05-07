@@ -215,8 +215,9 @@ const DeliveryOrdersScreen = () => {
   const isDeliveryOnline = user?.isOnline || false;
   const [localOnline, setLocalOnline] = useState(isDeliveryOnline);
   const [onlineLoading, setOnlineLoading] = useState(false);
-  // Flag para saber si ya se sincronizo el estado inicial del servidor (state para re-render)
-  const [onlineSynced, setOnlineSynced] = useState(false);
+  // Si user ya existe (restaurado de AsyncStorage o login), considerar sincronizado.
+  // Esto evita que se carguen ordenes mientras espera fetchProfile.
+  const [onlineSynced, setOnlineSynced] = useState(user !== null);
 
   // Sincronizar con el user del contexto (tras fetchProfile)
   useEffect(() => {
