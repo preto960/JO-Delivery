@@ -215,14 +215,19 @@ const DeliveryOrdersScreen = () => {
   const isDeliveryOnline = user?.isOnline || false;
   const [localOnline, setLocalOnline] = useState(isDeliveryOnline);
   const [onlineLoading, setOnlineLoading] = useState(false);
-  // Flag para saber si ya se sincronizo el estado inicial del servidor
-  const onlineSynced = useRef(false);
+  // Flag para saber si ya se sincronizo el estado inicial del servidor (state para re-render)
+  const [onlineSynced, setOnlineSynced] = useState(false);
 
   // Sincronizar con el user del contexto (tras fetchProfile)
   useEffect(() => {
     if (user?.isOnline !== undefined) {
+      const wasUnsynced = !onlineSynced;
       setLocalOnline(user.isOnline);
-      onlineSynced.current = true;
+      setOnlineSynced(true);
+      // Al sincronizarse y estar online, asegurar que Disponibles este seleccionado
+      if (wasUnsynced && user.isOnline) {
+        setActiveTab('available');
+      }
     }
   }, [user?.isOnline]);
 
@@ -250,11 +255,16 @@ const DeliveryOrdersScreen = () => {
             confirmText: 'Ver mis entregas',
             onConfirm: () => {
               setConfirmModal({visible: false, type: 'confirm', title: '', message: '', confirmText: 'Aceptar', onConfirm: null});
-              setActiveTab('my_deliveries');
               const ids = myShipped.map(o => String(o.id));
               pendingHighlightRef.current = ids[0];
               setHighlightMultiple(ids);
-              loadOrders(true);
+              if (activeTab !== 'my_deliveries') {
+                // Si no estamos en Mis entregas, cambiar de tab.
+                // NO llamar loadOrders aqui porque usa activeTab del closure (el viejo).
+                // El useEffect de loadOrders se disparara al cambiar activeTab.
+                setActiveTab('my_deliveries');
+              }
+              // Si ya estamos en my_deliveries, solo aplicar highlight (no recargar)
             },
           });
           return;
@@ -306,6 +316,8 @@ const DeliveryOrdersScreen = () => {
   const [highlightOrderId, setHighlightOrderId] = useState(null);
   const [highlightMultiple, setHighlightMultiple] = useState([]);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  // Animacion de parpadeo para alert highlight
+  const alertBlinkAnim = useRef(new Animated.Value(0)).current;
   // Ref para highlight pendiente (espera a que la lista se refresque)
   const pendingHighlightRef = useRef(null);
 
@@ -368,7 +380,7 @@ const DeliveryOrdersScreen = () => {
         setError(null);
 
         // Si esta desconectado y ya se sincronizo, no consultar pedidos
-        if (onlineSynced.current && !localOnline) {
+        if (onlineSynced && !localOnline) {
           setOrders([]);
           return;
         }
@@ -421,7 +433,7 @@ const DeliveryOrdersScreen = () => {
         setRefreshing(false);
       }
     },
-    [activeTab, user?.id, localOnline],
+    [activeTab, user?.id, localOnline, onlineSynced],
   );
 
   // Carga inicial con pantalla completa, cambios de tab solo refrescan datos
@@ -531,6 +543,30 @@ const DeliveryOrdersScreen = () => {
       }
     }, 600);
   }, [highlightOrderId, orders]);
+
+  // Animacion de parpadeo para highlightMultiple (alert border)
+  useEffect(() => {
+    if (highlightMultiple.length === 0) {
+      alertBlinkAnim.setValue(0);
+      return;
+    }
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(alertBlinkAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: false,
+        }),
+        Animated.timing(alertBlinkAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: false,
+        }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [highlightMultiple]);
 
   // Limpiar highlightMultiple despues de 8 segundos
   useEffect(() => {
@@ -740,7 +776,7 @@ const DeliveryOrdersScreen = () => {
     if (loading) return null;
 
     // Si esta desconectado (y ya se sincronizo con el servidor), mostrar mensaje
-    if (onlineSynced.current && !localOnline) {
+    if (onlineSynced && !localOnline) {
       return (
         <View style={styles.emptyContainer}>
           <View style={styles.offlineEmptyIcon}>
@@ -797,7 +833,7 @@ const DeliveryOrdersScreen = () => {
         )}
       </View>
     );
-  }, [loading, error, activeTab, loadOrders, localOnline]);
+  }, [loading, error, activeTab, loadOrders, localOnline, onlineSynced]);
 
   // ─── Render: Order Card ──────────────────────────────────────────────────
 
@@ -816,10 +852,20 @@ const DeliveryOrdersScreen = () => {
               transform: [{scale: pulseAnim}],
             },
           ]}>
-        <View style={[
+        <Animated.View style={[
           styles.card,
           isHighlighted && styles.cardHighlighted,
           isAlertHighlight && styles.cardAlertHighlight,
+          isAlertHighlight && {
+            borderColor: alertBlinkAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['#FF572244', '#FF5722'],
+            }),
+            shadowOpacity: alertBlinkAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.1, 0.6],
+            }),
+          },
         ]}>
           {/* Card Header */}
           <View style={styles.cardHeader}>
@@ -987,18 +1033,18 @@ const DeliveryOrdersScreen = () => {
             )}
             </View>
           </View>
-        </View>
+        </Animated.View>
         </Animated.View>
       );
     },
-    [actionLoading, handleAcceptOrder, handleMarkDelivered, activeTab, user?.id, handleOpenMap, highlightOrderId, pulseAnim, localOnline, highlightMultiple],
+    [actionLoading, handleAcceptOrder, handleMarkDelivered, activeTab, user?.id, handleOpenMap, highlightOrderId, pulseAnim, localOnline, highlightMultiple, alertBlinkAnim],
   );
 
   // ─── Render: Filter Tabs ─────────────────────────────────────────────────
 
   const renderFilterTabs = useCallback(() => {
     // No mostrar tabs deshabilitados hasta que se sincronice con el servidor
-    const isOffline = onlineSynced.current && !localOnline;
+    const isOffline = onlineSynced && !localOnline;
     return (
       <View style={styles.tabsContainer}>
         {FILTER_TABS.map(tab => {
@@ -1029,7 +1075,7 @@ const DeliveryOrdersScreen = () => {
         })}
       </View>
     );
-  }, [activeTab, handleTabChange, localOnline]);
+  }, [activeTab, handleTabChange, localOnline, onlineSynced]);
 
   // ─── Render: Native Map Modal ────────────────────────────────────────────
 
@@ -1295,7 +1341,7 @@ const DeliveryOrdersScreen = () => {
       {renderFilterTabs()}
 
       {/* Offline hint banner */}
-      {onlineSynced.current && !localOnline && (
+      {onlineSynced && !localOnline && (
         <View style={styles.offlineBanner}>
           <Icon name="information-circle-outline" size={14} color="#E65100" />
           <Text style={styles.offlineBannerText}>
