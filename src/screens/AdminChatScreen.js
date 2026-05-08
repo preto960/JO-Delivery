@@ -15,7 +15,6 @@ import {
 import {Ionicons} from 'react-native-vector-icons/Ionicons';
 import {useAuth} from '@context/AuthContext';
 import apiService from '@services/api';
-import {getPusherClient} from '@services/pusher';
 import theme from '@theme/styles';
 import useThemeColors from '@hooks/useThemeColors';
 
@@ -37,6 +36,8 @@ const formatDate = dateStr => {
   return `${d}/${m}`;
 };
 
+const POLL_INTERVAL = 5000;
+
 // ─── Component ────────────────────────────────────────────────────────────
 
 const AdminChatScreen = ({navigation}) => {
@@ -49,95 +50,82 @@ const AdminChatScreen = ({navigation}) => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [onlineCount, setOnlineCount] = useState(0);
-  const [connected, setConnected] = useState(false);
 
   const flatListRef = useRef(null);
-  const pusherRef = useRef(null);
-  const channelRef = useRef(null);
+  const pollTimerRef = useRef(null);
+  const isMountedRef = useRef(true);
+  const lastMsgCountRef = useRef(0);
 
   // ─── Fetch message history ─────────────────────────────────────────────
 
-  const fetchMessages = useCallback(async () => {
+  const fetchMessages = useCallback(async (isBackground = false) => {
+    if (!isMountedRef.current) return;
     try {
-      setLoading(true);
+      if (!isBackground) setLoading(true);
       const res = await apiService.fetchAdminChatMessages();
+
+      if (!isMountedRef.current) return;
+
+      // Handle different response formats
+      let msgs = [];
       if (res && res.messages) {
-        setMessages(res.messages);
+        msgs = res.messages;
+      } else if (res && res.data && Array.isArray(res.data)) {
+        msgs = res.data.map(m => ({
+          id: String(m.id),
+          content: m.content,
+          senderId: String(m.senderId),
+          senderName: m.sender?.name || 'Admin',
+          senderRole: 'admin',
+          createdAt: m.createdAt,
+        }));
+      } else if (Array.isArray(res)) {
+        msgs = res;
       }
+
+      setMessages(msgs);
+
+      // Auto-scroll only if new messages were added
+      if (msgs.length > lastMsgCountRef.current && flatListRef.current) {
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({animated: true});
+        }, 100);
+      }
+      lastMsgCountRef.current = msgs.length;
     } catch (err) {
       console.error('Error cargando mensajes admin:', err);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current && !isBackground) setLoading(false);
     }
   }, []);
 
+  // ─── Initial load ──────────────────────────────────────────────────────
+
   useEffect(() => {
-    fetchMessages();
+    isMountedRef.current = true;
+    fetchMessages(false);
+
+    // Start polling for new messages
+    pollTimerRef.current = setInterval(() => {
+      fetchMessages(true);
+    }, POLL_INTERVAL);
+
+    return () => {
+      isMountedRef.current = false;
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
   }, [fetchMessages]);
 
   // ─── Pull to refresh ──────────────────────────────────────────────────
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchMessages();
+    await fetchMessages(false);
     setRefreshing(false);
   }, [fetchMessages]);
-
-  // ─── Subscribe to Pusher presence channel ─────────────────────────────
-
-  useEffect(() => {
-    if (!token) return;
-
-    const pusher = getPusherClient(token);
-    pusherRef.current = pusher;
-
-    const channel = pusher.subscribe('presence-admin-chat');
-    channelRef.current = channel;
-
-    channel.bind('pusher:subscription_succeeded', () => {
-      setConnected(true);
-      const members = channel.members;
-      setOnlineCount(members.count);
-    });
-
-    channel.bind('pusher:member_added', () => {
-      const members = channel.members;
-      setOnlineCount(members.count);
-    });
-
-    channel.bind('pusher:member_removed', () => {
-      const members = channel.members;
-      setOnlineCount(members.count);
-    });
-
-    channel.bind('admin-message', data => {
-      setMessages(prev => {
-        if (prev.some(m => m.id === data.id)) return prev;
-        return [...prev, data];
-      });
-    });
-
-    return () => {
-      if (channelRef.current) {
-        channelRef.current.unbind('pusher:subscription_succeeded');
-        channelRef.current.unbind('pusher:member_added');
-        channelRef.current.unbind('pusher:member_removed');
-        channelRef.current.unbind('admin-message');
-        pusherRef.current.unsubscribe('presence-admin-chat');
-      }
-    };
-  }, [token]);
-
-  // ─── Auto-scroll to bottom on new messages ────────────────────────────
-
-  useEffect(() => {
-    if (messages.length > 0 && flatListRef.current) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({animated: true});
-      }, 100);
-    }
-  }, [messages]);
 
   // ─── Send message ─────────────────────────────────────────────────────
 
@@ -148,6 +136,8 @@ const AdminChatScreen = ({navigation}) => {
     setSending(true);
     try {
       await apiService.sendAdminChatMessage(content);
+      // Immediately refresh to show the sent message
+      await fetchMessages(true);
     } catch (err) {
       console.error('Error enviando mensaje admin:', err);
       setInputText(content);
@@ -178,22 +168,22 @@ const AdminChatScreen = ({navigation}) => {
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Chat Admin</Text>
           <View style={styles.statusRow}>
-            <View style={[styles.statusDot, connected ? styles.statusDotOnline : styles.statusDotOffline]} />
-            <Text style={styles.headerSubtitle}>
-              {connected ? `${onlineCount} en linea` : 'Desconectado'}
-            </Text>
+            <View style={styles.statusDotOnline} />
+            <Text style={styles.headerSubtitle}>Sincronizando</Text>
           </View>
         </View>
       ),
       headerRight: () => <View style={{width: 40}} />,
     });
-  }, [navigation, onlineCount, connected, styles]);
+  }, [navigation, styles]);
 
   // ─── Render: Message Bubble ───────────────────────────────────────────
 
   const renderMessage = useCallback(
     ({item, index}) => {
-      const isSender = item.senderId === (user && user.id);
+      const senderId = String(item.senderId);
+      const userId = user ? String(user.id) : '';
+      const isSender = senderId === userId;
       const prevMessage = index > 0 ? messages[index - 1] : null;
       const showDate =
         !prevMessage ||
@@ -388,16 +378,11 @@ const createStyles = primary =>
       gap: 4,
       marginTop: 1,
     },
-    statusDot: {
+    statusDotOnline: {
       width: 6,
       height: 6,
       borderRadius: 3,
-    },
-    statusDotOnline: {
       backgroundColor: '#22C55E',
-    },
-    statusDotOffline: {
-      backgroundColor: '#EF4444',
     },
     headerSubtitle: {
       fontSize: theme.fontSize.xs,
