@@ -16,7 +16,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useAuth} from '@context/AuthContext';
 import apiService from '@services/api';
-import {getPusherClient, disconnectPusher} from '@services/pusher';
+import {getPusherClient} from '@services/pusher';
 import theme from '@theme/styles';
 import useThemeColors from '@hooks/useThemeColors';
 
@@ -119,20 +119,6 @@ const AdminChatScreen = ({navigation}) => {
     try {
       pusher = getPusherClient(token);
       pusherRef.current = pusher;
-
-      // Override headers to include X-Platform
-      const origAuthorize = pusher.config.channelAuthorization;
-      pusher.config.channelAuthorization = {
-        ...origAuthorize,
-        headers: {
-          ...(origAuthorize.headers || {}),
-          'X-Platform': 'app-delivery',
-        },
-        headersProvider: () => ({
-          Authorization: `Bearer ${token}`,
-          'X-Platform': 'app-delivery',
-        }),
-      };
 
       pusher.connection.bind('connected', () => {
         if (isMountedRef.current) setPusherConnected(true);
