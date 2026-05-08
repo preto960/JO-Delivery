@@ -11,10 +11,12 @@ import {
   SafeAreaView,
   RefreshControl,
   StyleSheet,
+  ScrollView,
 } from 'react-native';
-import {Ionicons} from 'react-native-vector-icons/Ionicons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useAuth} from '@context/AuthContext';
 import apiService from '@services/api';
+import {getPusherClient, disconnectPusher} from '@services/pusher';
 import theme from '@theme/styles';
 import useThemeColors from '@hooks/useThemeColors';
 
@@ -51,10 +53,17 @@ const AdminChatScreen = ({navigation}) => {
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Online members from presence channel
+  const [onlineMembers, setOnlineMembers] = useState([]);
+  const [showMembers, setShowMembers] = useState(false);
+  const [pusherConnected, setPusherConnected] = useState(false);
+
   const flatListRef = useRef(null);
   const pollTimerRef = useRef(null);
   const isMountedRef = useRef(true);
   const lastMsgCountRef = useRef(0);
+  const pusherRef = useRef(null);
+  const channelRef = useRef(null);
 
   // ─── Fetch message history ─────────────────────────────────────────────
 
@@ -98,6 +107,102 @@ const AdminChatScreen = ({navigation}) => {
       if (isMountedRef.current && !isBackground) setLoading(false);
     }
   }, []);
+
+  // ─── Pusher presence subscription ─────────────────────────────────────
+
+  useEffect(() => {
+    if (!token) return;
+
+    let pusher = null;
+    let channel = null;
+
+    try {
+      pusher = getPusherClient(token);
+      pusherRef.current = pusher;
+
+      // Override headers to include X-Platform
+      const origAuthorize = pusher.config.channelAuthorization;
+      pusher.config.channelAuthorization = {
+        ...origAuthorize,
+        headers: {
+          ...(origAuthorize.headers || {}),
+          'X-Platform': 'app-delivery',
+        },
+        headersProvider: () => ({
+          Authorization: `Bearer ${token}`,
+          'X-Platform': 'app-delivery',
+        }),
+      };
+
+      pusher.connection.bind('connected', () => {
+        if (isMountedRef.current) setPusherConnected(true);
+      });
+      pusher.connection.bind('disconnected', () => {
+        if (isMountedRef.current) setPusherConnected(false);
+      });
+      if (pusher.connection.state === 'connected') {
+        setPusherConnected(true);
+      }
+
+      channel = pusher.subscribe('presence-admin-chat');
+      channelRef.current = channel;
+
+      channel.bind('pusher:subscription_succeeded', members => {
+        if (!isMountedRef.current) return;
+        const list = [];
+        members.each(m => {
+          list.push({
+            id: m.id,
+            name: m.info?.name,
+            platform: m.info?.platform,
+          });
+        });
+        // Show only users from other platforms (not app-delivery, not self)
+        const filtered = list.filter(
+          m => m.id !== String(user?.id) && m.platform !== 'app-delivery',
+        );
+        setOnlineMembers(filtered);
+      });
+
+      channel.bind('pusher:member_added', member => {
+        if (!isMountedRef.current) return;
+        if (member.id === String(user?.id) || member.info?.platform === 'app-delivery') return;
+        setOnlineMembers(prev => [
+          ...prev,
+          {
+            id: member.id,
+            name: member.info?.name,
+            platform: member.info?.platform,
+          },
+        ]);
+      });
+
+      channel.bind('pusher:member_removed', member => {
+        if (!isMountedRef.current) return;
+        setOnlineMembers(prev => prev.filter(m => m.id !== member.id));
+      });
+
+      channel.bind('pusher:subscription_error', err => {
+        console.warn('[AdminChat] Presence subscription error:', err);
+      });
+    } catch (err) {
+      console.error('[AdminChat] Pusher init error:', err);
+    }
+
+    return () => {
+      if (channel) {
+        channel.unbind('pusher:subscription_succeeded');
+        channel.unbind('pusher:member_added');
+        channel.unbind('pusher:member_removed');
+        channel.unbind('pusher:subscription_error');
+        try {
+          pusher.unsubscribe('presence-admin-chat');
+        } catch {}
+      }
+      pusherRef.current = null;
+      channelRef.current = null;
+    };
+  }, [token, user?.id]);
 
   // ─── Initial load ──────────────────────────────────────────────────────
 
@@ -146,36 +251,90 @@ const AdminChatScreen = ({navigation}) => {
     }
   };
 
-  // ─── Header setup ─────────────────────────────────────────────────────
+  // ─── Render: Online member item ───────────────────────────────────────
 
-  useEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      title: '',
-      headerStyle: {
-        backgroundColor: theme.colors.white,
-        ...theme.shadows.sm,
-      },
-      headerLeft: () => (
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          hitSlop={{top: 8, bottom: 8, left: 4, right: 4}}
-          style={styles.headerBackBtn}>
-          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-      ),
-      headerTitle: () => (
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Chat Admin</Text>
-          <View style={styles.statusRow}>
-            <View style={styles.statusDotOnline} />
-            <Text style={styles.headerSubtitle}>Sincronizando</Text>
+  const getPlatformLabel = platform => {
+    if (platform === 'landingpage') return 'Landingpage';
+    if (platform === 'frontend-shop') return 'Web Admin';
+    if (platform === 'app-shop') return 'App Shop';
+    if (platform === 'app-delivery') return 'App Delivery';
+    return 'Otro';
+  };
+
+  const getPlatformIcon = platform => {
+    if (platform === 'landingpage') return 'globe-outline';
+    if (platform === 'frontend-shop') return 'desktop-outline';
+    if (platform === 'app-delivery') return 'bicycle-outline';
+    return 'phone-portrait-outline';
+  };
+
+  const renderMember = useCallback(
+    ({item}) => (
+      <View style={styles.memberItem}>
+        <View style={styles.memberAvatar}>
+          <Text style={styles.memberAvatarText}>
+            {(item.name || 'A')
+              .split(' ')
+              .map(n => n[0])
+              .join('')
+              .toUpperCase()
+              .slice(0, 2)}
+          </Text>
+          <View style={styles.memberOnlineDot} />
+        </View>
+        <View style={styles.memberInfo}>
+          <Text style={styles.memberName} numberOfLines={1}>
+            {item.name || 'Admin'}
+          </Text>
+          <View style={styles.memberPlatformRow}>
+            <Ionicons
+              name={getPlatformIcon(item.platform)}
+              size={11}
+              color={theme.colors.textLight}
+            />
+            <Text style={styles.memberPlatform}>
+              {getPlatformLabel(item.platform)}
+            </Text>
           </View>
         </View>
-      ),
-      headerRight: () => <View style={{width: 40}} />,
-    });
-  }, [navigation, styles]);
+      </View>
+    ),
+    [styles],
+  );
+
+  // ─── Render: Online members panel ─────────────────────────────────────
+
+  const renderOnlinePanel = () => {
+    if (!showMembers) return null;
+    return (
+      <View style={styles.membersPanel}>
+        <View style={styles.membersPanelHeader}>
+          <Text style={styles.membersPanelTitle}>
+            En linea ({onlineMembers.length})
+          </Text>
+          <TouchableOpacity
+            onPress={() => setShowMembers(false)}
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+            <Ionicons name="close" size={20} color={theme.colors.text} />
+          </TouchableOpacity>
+        </View>
+        {onlineMembers.length === 0 ? (
+          <View style={styles.membersEmpty}>
+            <Text style={styles.membersEmptyText}>
+              No hay administradores conectados
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={onlineMembers}
+            keyExtractor={item => item.id}
+            renderItem={renderMember}
+            keyboardShouldPersistTaps="handled"
+          />
+        )}
+      </View>
+    );
+  };
 
   // ─── Render: Message Bubble ───────────────────────────────────────────
 
@@ -271,7 +430,25 @@ const AdminChatScreen = ({navigation}) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              hitSlop={{top: 8, bottom: 8, left: 4, right: 4}}>
+              <Ionicons
+                name="arrow-back"
+                size={24}
+                color={theme.colors.text}
+              />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Chat Admin</Text>
+          </View>
+          <View style={styles.headerRight} />
+        </View>
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={primary} />
           <Text style={styles.loaderText}>Cargando mensajes...</Text>
@@ -283,7 +460,50 @@ const AdminChatScreen = ({navigation}) => {
   // ─── Main Render ──────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* Custom Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={{top: 8, bottom: 8, left: 4, right: 4}}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Chat Admin</Text>
+          <View style={styles.statusRow}>
+            <View
+              style={[
+                styles.statusDot,
+                {backgroundColor: pusherConnected ? '#22C55E' : '#EF4444'},
+              ]}
+            />
+            <Text style={styles.headerSubtitle}>
+              {pusherConnected ? 'En linea' : 'Desconectado'}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => setShowMembers(!showMembers)}
+            hitSlop={{top: 8, bottom: 8, left: 4, right: 4}}>
+            <Ionicons name="people-outline" size={22} color={theme.colors.text} />
+            {onlineMembers.length > 0 && (
+              <View style={styles.onlineBadge}>
+                <Text style={styles.onlineBadgeText}>
+                  {onlineMembers.length}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Online members panel */}
+      {renderOnlinePanel()}
+
+      {/* Chat body */}
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -360,12 +580,25 @@ const createStyles = primary =>
     },
 
     // Header
-    headerBackBtn: {
-      marginLeft: theme.spacing.sm,
-      padding: theme.spacing.xs,
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.white,
+      paddingHorizontal: theme.spacing.md,
+      paddingTop: theme.spacing.sm,
+      paddingBottom: theme.spacing.md,
+      ...theme.shadows.sm,
+    },
+    headerLeft: {
+      width: 40,
     },
     headerCenter: {
+      flex: 1,
       alignItems: 'center',
+    },
+    headerRight: {
+      width: 40,
+      alignItems: 'flex-end',
     },
     headerTitle: {
       fontSize: theme.fontSize.lg,
@@ -378,15 +611,110 @@ const createStyles = primary =>
       gap: 4,
       marginTop: 1,
     },
-    statusDotOnline: {
+    statusDot: {
       width: 6,
       height: 6,
       borderRadius: 3,
-      backgroundColor: '#22C55E',
     },
     headerSubtitle: {
       fontSize: theme.fontSize.xs,
       color: theme.colors.textSecondary,
+    },
+    onlineBadge: {
+      position: 'absolute',
+      top: -4,
+      right: -6,
+      backgroundColor: '#22C55E',
+      borderRadius: 10,
+      minWidth: 16,
+      height: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 4,
+    },
+    onlineBadgeText: {
+      fontSize: 9,
+      fontWeight: '700',
+      color: theme.colors.white,
+    },
+
+    // Online members panel
+    membersPanel: {
+      backgroundColor: theme.colors.white,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      maxHeight: 200,
+    },
+    membersPanelHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.colors.border,
+    },
+    membersPanelTitle: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: '700',
+      color: theme.colors.text,
+    },
+    membersEmpty: {
+      paddingVertical: theme.spacing.lg,
+      alignItems: 'center',
+    },
+    membersEmptyText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textLight,
+    },
+    memberItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      gap: theme.spacing.sm,
+    },
+    memberAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: primary + '20',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    memberAvatarText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: primary,
+    },
+    memberOnlineDot: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: '#22C55E',
+      borderWidth: 2,
+      borderColor: theme.colors.white,
+    },
+    memberInfo: {
+      flex: 1,
+    },
+    memberName: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    memberPlatformRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      marginTop: 1,
+    },
+    memberPlatform: {
+      fontSize: 11,
+      color: theme.colors.textLight,
     },
 
     // Loader
