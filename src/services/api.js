@@ -480,6 +480,20 @@ const deleteBatch = async (batchId) => {
   return api.delete(`/product-batches/${batchId}`);
 };
 
+// ==================== CHAT ====================
+
+const sendChatMessage = async (orderId, content, senderRole) => {
+  const api = await createApiClient();
+  if (!api) throw new Error('No hay URL del servidor configurada');
+  return api.post('/chats/messages', {orderId, content, senderRole});
+};
+
+const fetchChatMessages = async (orderId) => {
+  const api = await createApiClient();
+  if (!api) throw new Error('No hay URL del servidor configurada');
+  return api.get(`/chats/conversations/${orderId}`);
+};
+
 // Alias for backward compatibility
 const fetchStoresAdmin = fetchAdminStores;
 
@@ -563,6 +577,9 @@ const apiService = {
   deleteBatch,
   // Online status
   updateOnlineStatus,
+  // Chat
+  sendChatMessage,
+  fetchChatMessages,
 };
 
 export default apiService;

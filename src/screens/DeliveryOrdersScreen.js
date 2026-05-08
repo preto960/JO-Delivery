@@ -999,28 +999,46 @@ const DeliveryOrdersScreen = () => {
               )}
 
             {item.status === 'shipped' && item.deliveryId === user?.id && (
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  styles.deliverButton,
-                  !localOnline && styles.actionButtonDisabled,
-                ]}
-                onPress={() => handleMarkDelivered(item)}
-                disabled={isActing || !localOnline}
-                activeOpacity={localOnline ? 0.8 : 1}>
-                {(isActing || !localOnline) ? (
-                  <ActivityIndicator size="small" color={theme.colors.white} />
-                ) : (
-                  <>
-                    <Icon
-                      name="checkmark-done-outline"
-                      size={16}
-                      color={theme.colors.white}
-                    />
-                    <Text style={styles.actionButtonText}>Entregado</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    styles.chatButton,
+                    !localOnline && styles.actionButtonDisabled,
+                  ]}
+                  onPress={() => navigation.navigate('Chat', {
+                    orderId: item.id,
+                    orderNumber: item.orderNumber,
+                    otherUserName: item.customerName || 'Cliente',
+                  })}
+                  disabled={!localOnline}
+                  activeOpacity={localOnline ? 0.8 : 1}>
+                  <Icon name="chatbubble-outline" size={16} color={theme.colors.white} />
+                  <Text style={styles.actionButtonText}>Chat</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    styles.deliverButton,
+                    !localOnline && styles.actionButtonDisabled,
+                  ]}
+                  onPress={() => handleMarkDelivered(item)}
+                  disabled={isActing || !localOnline}
+                  activeOpacity={localOnline ? 0.8 : 1}>
+                  {(isActing || !localOnline) ? (
+                    <ActivityIndicator size="small" color={theme.colors.white} />
+                  ) : (
+                    <>
+                      <Icon
+                        name="checkmark-done-outline"
+                        size={16}
+                        color={theme.colors.white}
+                      />
+                      <Text style={styles.actionButtonText}>Entregado</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </>
             )}
 
             {item.status === 'delivered' && (
@@ -1693,6 +1711,9 @@ const createStyles = (primary) => StyleSheet.create({
     backgroundColor: '#1ABC9C',
   },
   mapButton: {
+    backgroundColor: '#3498DB',
+  },
+  chatButton: {
     backgroundColor: '#3498DB',
   },
   deliverButton: {
