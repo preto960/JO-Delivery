@@ -508,6 +508,19 @@ const fetchChatMessages = async (orderId) => {
   return api.get(`/chats/conversations/${orderId}`);
 };
 
+// Admin Chat
+const fetchAdminChatMessages = async () => {
+  const api = await createApiClient();
+  if (!api) throw new Error('No hay URL del servidor configurada');
+  return api.get('/chats/admin/messages');
+};
+
+const sendAdminChatMessage = async (content) => {
+  const api = await createApiClient();
+  if (!api) throw new Error('No hay URL del servidor configurada');
+  return api.post('/chats/admin/messages', { content });
+};
+
 // Alias for backward compatibility
 const fetchStoresAdmin = fetchAdminStores;
 
@@ -594,6 +607,8 @@ const apiService = {
   // Chat
   sendChatMessage,
   fetchChatMessages,
+  fetchAdminChatMessages,
+  sendAdminChatMessage,
   // Tracking
   sendLocationUpdate,
   fetchLocationHistory,

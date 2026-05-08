@@ -24,6 +24,7 @@ import AdminUsersScreen from '@screens/AdminUsersScreen';
 import AdminStoresScreen from '@screens/AdminStoresScreen';
 import AdminBatchesScreen from '@screens/AdminBatchesScreen';
 import ChatScreen from '@screens/ChatScreen';
+import AdminChatScreen from '@screens/AdminChatScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -172,6 +173,7 @@ const AppNavigator = () => {
           <Stack.Screen name="AdminRolesPage" component={AdminRolesScreen} />
           <Stack.Screen name="AdminUsersPage" component={AdminUsersScreen} />
           <Stack.Screen name="Chat" component={ChatScreen} />
+          <Stack.Screen name="AdminChat" component={AdminChatScreen} />
         </>
       ) : (
         // ─── DELIVERY ─────────────────────────────────────────────
