@@ -28,6 +28,7 @@ import theme from '@theme/styles';
 import ConfirmModal from '@components/ConfirmModal';
 import Toast from '@components/Toast';
 import useThemeColors from '@hooks/useThemeColors';
+import {startTracking, stopTracking, isTracking} from '@services/tracking';
 
 // ─── Status Configuration ─────────────────────────────────────────────────────
 
@@ -569,6 +570,32 @@ const DeliveryOrdersScreen = () => {
     return () => animation.stop();
   }, [highlightMultiple]);
 
+  // ─── GPS Tracking: auto-start for active shipped orders ──────────────
+
+  // When orders load and there are shipped orders assigned to this driver,
+  // automatically start tracking the first one.
+  useEffect(() => {
+    if (!isFocused || !localOnline || !onlineSynced) return;
+
+    const shippedOrders = orders.filter(
+      o => o.status === 'shipped' && o.deliveryId === user?.id,
+    );
+
+    if (shippedOrders.length > 0 && !isTracking()) {
+      startTracking(shippedOrders[0].id).catch(() => {});
+    } else if (shippedOrders.length === 0 && isTracking()) {
+      // No active shipments but tracking is running — stop it
+      stopTracking();
+    }
+  }, [orders, isFocused, localOnline, onlineSynced, user?.id]);
+
+  // Cleanup: stop tracking when screen unmounts
+  useEffect(() => {
+    return () => {
+      stopTracking();
+    };
+  }, []);
+
   // Limpiar highlightMultiple despues de 8 segundos
   useEffect(() => {
     if (highlightMultiple.length === 0) return;
@@ -711,6 +738,8 @@ const DeliveryOrdersScreen = () => {
             setActionLoading(order.id);
             await apiService.acceptOrder(order.id);
             showToast('Pedido aceptado correctamente. ¡En camino!');
+            // Iniciar rastreo GPS para esta entrega
+            startTracking(order.id).catch(() => {});
             // Recargar lista
             setTimeout(() => loadOrders(true), 300);
           } catch (err) {
@@ -744,6 +773,8 @@ const DeliveryOrdersScreen = () => {
             setActionLoading(order.id);
             await apiService.updateOrderStatus(order.id, 'delivered');
             showToast('Entrega confirmada', 'success');
+            // Detener rastreo GPS al entregar
+            stopTracking();
             setTimeout(() => loadOrders(true), 300);
           } catch (err) {
             showToast(err?.message || 'Error al confirmar entrega', 'error');
