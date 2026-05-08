@@ -1,4 +1,6 @@
-import Pusher from 'pusher-js';
+// Use require() instead of import — Metro's ES module interop wraps
+// pusher-js in a module object where `default` is not a constructor.
+const Pusher = require('pusher-js');
 
 const PUSHER_KEY = '5c0dab8f11f43914d9a6';
 const PUSHER_CLUSTER = 'us2';
