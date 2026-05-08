@@ -1,6 +1,7 @@
-// Use require() instead of import — Metro's ES module interop wraps
-// pusher-js in a module object where `default` is not a constructor.
-const Pusher = require('pusher-js');
+// pusher-js v8 exports { Pusher: [constructor] }, not the constructor directly.
+// We must destructure .Pusher from the module — both `import` and `require()`
+// return the wrapper object, which is NOT callable with `new`.
+const {Pusher} = require('pusher-js');
 
 const PUSHER_KEY = '5c0dab8f11f43914d9a6';
 const PUSHER_CLUSTER = 'us2';
