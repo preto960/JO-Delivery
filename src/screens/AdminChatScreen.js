@@ -11,7 +11,6 @@ import {
   SafeAreaView,
   RefreshControl,
   StyleSheet,
-  ScrollView,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useAuth} from '@context/AuthContext';
@@ -19,6 +18,9 @@ import apiService from '@services/api';
 import {getPusherClient} from '@services/pusher';
 import theme from '@theme/styles';
 import useThemeColors from '@hooks/useThemeColors';
+
+// ─── Config ──────────────────────────────────────────────────────────────
+const THIS_PLATFORM = 'app-delivery';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -38,7 +40,15 @@ const formatDate = dateStr => {
   return `${d}/${m}`;
 };
 
-const POLL_INTERVAL = 5000;
+const getInitials = name => {
+  if (!name) return 'A';
+  return name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+};
 
 // ─── Component ────────────────────────────────────────────────────────────
 
@@ -49,66 +59,64 @@ const AdminChatScreen = ({navigation}) => {
 
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-
-  // Online members from presence channel
   const [onlineMembers, setOnlineMembers] = useState([]);
-  const [showMembers, setShowMembers] = useState(false);
   const [pusherConnected, setPusherConnected] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
 
   const flatListRef = useRef(null);
-  const pollTimerRef = useRef(null);
   const isMountedRef = useRef(true);
-  const lastMsgCountRef = useRef(0);
   const pusherRef = useRef(null);
   const channelRef = useRef(null);
+  const inputRef = useRef(null);
 
-  // ─── Fetch message history ─────────────────────────────────────────────
+  const myUserId = user ? String(user.id) : '';
 
-  const fetchMessages = useCallback(async (isBackground = false) => {
-    if (!isMountedRef.current) return;
-    try {
-      if (!isBackground) setLoading(true);
-      const res = await apiService.fetchAdminChatMessages();
+  // ─── Fetch messages for selected member ────────────────────────────────
 
-      if (!isMountedRef.current) return;
+  const fetchMessages = useCallback(
+    async (isBackground = false) => {
+      if (!isMountedRef.current || !selectedMember) return;
+      try {
+        if (!isBackground) setLoading(true);
+        const recipientId = parseInt(selectedMember.id.split('-')[0]);
+        const res = await apiService.fetchAdminChatMessages(recipientId);
 
-      // Handle different response formats
-      let msgs = [];
-      if (res && res.messages) {
-        msgs = res.messages;
-      } else if (res && res.data && Array.isArray(res.data)) {
-        msgs = res.data.map(m => ({
-          id: String(m.id),
-          content: m.content,
-          senderId: String(m.senderId),
-          senderName: m.sender?.name || 'Admin',
-          senderRole: 'admin',
-          createdAt: m.createdAt,
-        }));
-      } else if (Array.isArray(res)) {
-        msgs = res;
+        if (!isMountedRef.current) return;
+
+        let msgs = [];
+        if (res && res.data && Array.isArray(res.data)) {
+          msgs = res.data.map(m => ({
+            id: String(m.id),
+            content: m.content,
+            senderId: String(m.senderId),
+            senderName: m.sender?.name || 'Admin',
+            platform: m.platform || 'unknown',
+            createdAt: m.createdAt,
+          }));
+        } else if (res && res.messages) {
+          msgs = res.messages;
+        }
+
+        setMessages(msgs);
+
+        if (msgs.length > 0 && flatListRef.current) {
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({animated: true});
+          }, 100);
+        }
+      } catch (err) {
+        console.error('Error cargando mensajes admin:', err);
+      } finally {
+        if (isMountedRef.current && !isBackground) setLoading(false);
       }
+    },
+    [selectedMember],
+  );
 
-      setMessages(msgs);
-
-      // Auto-scroll only if new messages were added
-      if (msgs.length > lastMsgCountRef.current && flatListRef.current) {
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({animated: true});
-        }, 100);
-      }
-      lastMsgCountRef.current = msgs.length;
-    } catch (err) {
-      console.error('Error cargando mensajes admin:', err);
-    } finally {
-      if (isMountedRef.current && !isBackground) setLoading(false);
-    }
-  }, []);
-
-  // ─── Pusher presence subscription ─────────────────────────────────────
+  // ─── Pusher: presence + real-time messages ────────────────────────────
 
   useEffect(() => {
     if (!token) return;
@@ -143,16 +151,14 @@ const AdminChatScreen = ({navigation}) => {
             platform: m.info?.platform,
           });
         });
-        // Show only users from other platforms (not app-delivery, not self)
-        const filtered = list.filter(
-          m => m.id !== String(user?.id) && m.platform !== 'app-delivery',
-        );
+        // Only show admins from OTHER platforms (filter by platform only)
+        const filtered = list.filter(m => m.platform !== THIS_PLATFORM);
         setOnlineMembers(filtered);
       });
 
       channel.bind('pusher:member_added', member => {
         if (!isMountedRef.current) return;
-        if (member.id === String(user?.id) || member.info?.platform === 'app-delivery') return;
+        if (member.info?.platform === THIS_PLATFORM) return;
         setOnlineMembers(prev => [
           ...prev,
           {
@@ -168,8 +174,43 @@ const AdminChatScreen = ({navigation}) => {
         setOnlineMembers(prev => prev.filter(m => m.id !== member.id));
       });
 
+      // Real-time new-message event
+      channel.bind('new-message', data => {
+        if (!isMountedRef.current || !selectedMember) return;
+
+        const senderId = String(data.senderId);
+        const recipientId = data.recipientId
+          ? String(data.recipientId)
+          : null;
+        const selectedNumericId = selectedMember.id.split('-')[0];
+
+        const isForThisChat =
+          (senderId === selectedNumericId &&
+            (recipientId === myUserId || recipientId === null)) ||
+          (senderId === myUserId &&
+            (recipientId === selectedNumericId ||
+              data.targetPlatform === selectedMember.platform));
+
+        if (isForThisChat) {
+          setMessages(prev => {
+            if (prev.some(m => m.id === String(data.id))) return prev;
+            return [
+              ...prev,
+              {
+                id: String(data.id),
+                content: data.content,
+                senderId,
+                senderName: data.senderName || 'Admin',
+                platform: data.senderPlatform || 'unknown',
+                createdAt: data.createdAt,
+              },
+            ];
+          });
+        }
+      });
+
       channel.bind('pusher:subscription_error', err => {
-        console.warn('[AdminChat] Presence subscription error:', err);
+        console.warn('[AdminChat] Subscription error:', err);
       });
     } catch (err) {
       console.error('[AdminChat] Pusher init error:', err);
@@ -180,6 +221,7 @@ const AdminChatScreen = ({navigation}) => {
         channel.unbind('pusher:subscription_succeeded');
         channel.unbind('pusher:member_added');
         channel.unbind('pusher:member_removed');
+        channel.unbind('new-message');
         channel.unbind('pusher:subscription_error');
         try {
           pusher.unsubscribe('presence-admin-chat');
@@ -188,27 +230,34 @@ const AdminChatScreen = ({navigation}) => {
       pusherRef.current = null;
       channelRef.current = null;
     };
-  }, [token, user?.id]);
+  }, [token, selectedMember, myUserId]);
 
-  // ─── Initial load ──────────────────────────────────────────────────────
+  // ─── Load messages when member selected ────────────────────────────────
 
   useEffect(() => {
     isMountedRef.current = true;
-    fetchMessages(false);
-
-    // Start polling for new messages
-    pollTimerRef.current = setInterval(() => {
-      fetchMessages(true);
-    }, POLL_INTERVAL);
-
+    if (selectedMember) {
+      setMessages([]);
+      fetchMessages(false);
+    }
     return () => {
       isMountedRef.current = false;
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-        pollTimerRef.current = null;
-      }
     };
-  }, [fetchMessages]);
+  }, [selectedMember, fetchMessages]);
+
+  // ─── Select / deselect member ──────────────────────────────────────────
+
+  const selectMember = useCallback(member => {
+    setSelectedMember(member);
+    setMessages([]);
+    setInputText('');
+  }, []);
+
+  const deselectMember = useCallback(() => {
+    setSelectedMember(null);
+    setMessages([]);
+    setInputText('');
+  }, []);
 
   // ─── Pull to refresh ──────────────────────────────────────────────────
 
@@ -221,23 +270,27 @@ const AdminChatScreen = ({navigation}) => {
   // ─── Send message ─────────────────────────────────────────────────────
 
   const sendMessage = async () => {
-    if (!inputText.trim() || sending) return;
+    if (!inputText.trim() || sending || !selectedMember) return;
     const content = inputText.trim();
     setInputText('');
     setSending(true);
     try {
-      await apiService.sendAdminChatMessage(content);
-      // Immediately refresh to show the sent message
-      await fetchMessages(true);
+      const recipientId = parseInt(selectedMember.id.split('-')[0]);
+      await apiService.sendAdminChatMessage(
+        content,
+        recipientId,
+        selectedMember.platform || 'all',
+      );
     } catch (err) {
       console.error('Error enviando mensaje admin:', err);
       setInputText(content);
     } finally {
       setSending(false);
+      if (inputRef.current) inputRef.current.focus();
     }
   };
 
-  // ─── Render: Online member item ───────────────────────────────────────
+  // ─── Platform helpers ─────────────────────────────────────────────────
 
   const getPlatformLabel = platform => {
     if (platform === 'landingpage') return 'Landingpage';
@@ -254,81 +307,109 @@ const AdminChatScreen = ({navigation}) => {
     return 'phone-portrait-outline';
   };
 
-  const renderMember = useCallback(
-    ({item}) => (
-      <View style={styles.memberItem}>
-        <View style={styles.memberAvatar}>
-          <Text style={styles.memberAvatarText}>
-            {(item.name || 'A')
-              .split(' ')
-              .map(n => n[0])
-              .join('')
-              .toUpperCase()
-              .slice(0, 2)}
-          </Text>
-          <View style={styles.memberOnlineDot} />
-        </View>
-        <View style={styles.memberInfo}>
-          <Text style={styles.memberName} numberOfLines={1}>
-            {item.name || 'Admin'}
-          </Text>
-          <View style={styles.memberPlatformRow}>
-            <Ionicons
-              name={getPlatformIcon(item.platform)}
-              size={11}
-              color={theme.colors.textLight}
-            />
-            <Text style={styles.memberPlatform}>
-              {getPlatformLabel(item.platform)}
-            </Text>
-          </View>
-        </View>
-      </View>
-    ),
-    [styles],
-  );
-
-  // ─── Render: Online members panel ─────────────────────────────────────
-
-  const renderOnlinePanel = () => {
-    if (!showMembers) return null;
-    return (
-      <View style={styles.membersPanel}>
-        <View style={styles.membersPanelHeader}>
-          <Text style={styles.membersPanelTitle}>
-            En linea ({onlineMembers.length})
-          </Text>
-          <TouchableOpacity
-            onPress={() => setShowMembers(false)}
-            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-            <Ionicons name="close" size={20} color={theme.colors.text} />
-          </TouchableOpacity>
-        </View>
-        {onlineMembers.length === 0 ? (
-          <View style={styles.membersEmpty}>
-            <Text style={styles.membersEmptyText}>
-              No hay administradores conectados
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={onlineMembers}
-            keyExtractor={item => item.id}
-            renderItem={renderMember}
-            keyboardShouldPersistTaps="handled"
-          />
-        )}
-      </View>
-    );
+  const getPlatformColor = platform => {
+    if (platform === 'landingpage') return '#C9A84C';
+    if (platform === 'frontend-shop') return '#3b82f6';
+    if (platform === 'app-shop') return '#22c55e';
+    if (platform === 'app-delivery') return '#f97316';
+    return primary;
   };
 
-  // ─── Render: Message Bubble ───────────────────────────────────────────
+  // ─── Render: Online member item (clickable) ────────────────────────────
+
+  const renderMember = useCallback(
+    ({item}) => {
+      const pColor = getPlatformColor(item.platform);
+      return (
+        <TouchableOpacity
+          style={styles.memberItem}
+          onPress={() => selectMember(item)}
+          activeOpacity={0.6}>
+          <View style={[styles.memberAvatar, {backgroundColor: pColor + '20'}]}>
+            <Text style={[styles.memberAvatarText, {color: pColor}]}>
+              {getInitials(item.name)}
+            </Text>
+            <View style={styles.memberOnlineDot} />
+          </View>
+          <View style={styles.memberInfo}>
+            <Text style={styles.memberName} numberOfLines={1}>
+              {item.name || 'Admin'}
+            </Text>
+            <View style={styles.memberPlatformRow}>
+              <Ionicons
+                name={getPlatformIcon(item.platform)}
+                size={11}
+                color={theme.colors.textLight}
+              />
+              <Text style={styles.memberPlatform}>
+                {getPlatformLabel(item.platform)}
+              </Text>
+            </View>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color={theme.colors.textLight}
+          />
+        </TouchableOpacity>
+      );
+    },
+    [styles, selectMember],
+  );
+
+  // ─── Render: Online members list (when no member selected) ─────────────
+
+  const renderMembersList = () => (
+    <View style={styles.membersListContainer}>
+      <View style={styles.membersListHeader}>
+        <View style={styles.membersListHeaderLeft}>
+          <Ionicons
+            name="people-outline"
+            size={18}
+            color={primary}
+          />
+          <Text style={styles.membersListTitle}>
+            Administradores en linea
+          </Text>
+        </View>
+        <View style={styles.membersCountBadge}>
+          <Text style={styles.membersCountText}>{onlineMembers.length}</Text>
+        </View>
+      </View>
+
+      {onlineMembers.length === 0 ? (
+        <View style={styles.membersEmpty}>
+          <Ionicons
+            name="chatbubbles-outline"
+            size={48}
+            color={theme.colors.textLight}
+          />
+          <Text style={styles.membersEmptyTitle}>
+            Sin administradores conectados
+          </Text>
+          <Text style={styles.membersEmptyText}>
+            Los administradores desde otras plataformas apareceran aqui cuando se conecten
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={onlineMembers}
+          keyExtractor={item => item.id}
+          renderItem={renderMember}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.membersListContent}
+        />
+      )}
+    </View>
+  );
+
+  // ─── Render: Message bubble ────────────────────────────────────────────
 
   const renderMessage = useCallback(
     ({item, index}) => {
       const senderId = String(item.senderId);
-      const userId = user ? String(user.id) : '';
-      const isSender = senderId === userId;
+      const isMine = senderId === myUserId && item.platform === THIS_PLATFORM;
       const prevMessage = index > 0 ? messages[index - 1] : null;
       const showDate =
         !prevMessage ||
@@ -344,39 +425,34 @@ const AdminChatScreen = ({navigation}) => {
           <View
             style={[
               styles.messageRow,
-              isSender ? styles.messageRowSender : styles.messageRowReceiver,
+              isMine ? styles.messageRowSender : styles.messageRowReceiver,
             ]}>
             <View
               style={[
                 styles.bubble,
-                isSender ? styles.bubbleSender : styles.bubbleReceiver,
+                isMine ? styles.bubbleSender : styles.bubbleReceiver,
               ]}>
               <Text
                 style={[
                   styles.bubbleText,
-                  isSender ? styles.bubbleTextSender : styles.bubbleTextReceiver,
+                  isMine ? styles.bubbleTextSender : styles.bubbleTextReceiver,
                 ]}>
                 {item.content}
               </Text>
               <View
                 style={[
                   styles.bubbleFooter,
-                  isSender
+                  isMine
                     ? styles.bubbleFooterSender
                     : styles.bubbleFooterReceiver,
                 ]}>
-                {!isSender && item.senderName && (
+                {!isMine && item.senderName && (
                   <Text style={styles.senderName}>{item.senderName}</Text>
-                )}
-                {item.senderRole && (
-                  <Text style={styles.senderRole}>{item.senderRole}</Text>
                 )}
                 <Text
                   style={[
                     styles.timeText,
-                    isSender
-                      ? styles.timeTextSender
-                      : styles.timeTextReceiver,
+                    isMine ? styles.timeTextSender : styles.timeTextReceiver,
                   ]}>
                   {formatTime(item.createdAt)}
                 </Text>
@@ -386,38 +462,133 @@ const AdminChatScreen = ({navigation}) => {
         </View>
       );
     },
-    [messages, styles, user],
+    [messages, styles, myUserId],
   );
-
-  // ─── Key extractor ────────────────────────────────────────────────────
 
   const keyExtractor = useCallback(item => String(item.id), []);
 
-  // ─── Empty state ──────────────────────────────────────────────────────
+  // ─── Render: Empty state for chat ──────────────────────────────────────
 
-  const renderEmpty = useCallback(() => {
-    if (loading) return null;
+  const renderChatEmpty = useCallback(() => {
+    if (loading) {
+      return (
+        <View style={styles.chatEmptyContainer}>
+          <ActivityIndicator size="large" color={primary} />
+          <Text style={styles.chatEmptyText}>Cargando mensajes...</Text>
+        </View>
+      );
+    }
     return (
-      <View style={styles.emptyContainer}>
+      <View style={styles.chatEmptyContainer}>
         <Ionicons
           name="chatbubbles-outline"
-          size={56}
+          size={48}
           color={theme.colors.textLight}
         />
-        <Text style={styles.emptyTitle}>Sin mensajes</Text>
-        <Text style={styles.emptyText}>
-          Inicia una conversacion con el equipo de administradores.
-        </Text>
+        <Text style={styles.chatEmptyTitle}>Inicia la conversacion</Text>
       </View>
     );
-  }, [loading, styles]);
+  }, [loading, styles, primary]);
 
-  // ─── Loading state ────────────────────────────────────────────────────
+  // ─── Render: Chat view (when member selected) ─────────────────────────
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header */}
+  const renderChatView = () => (
+    <KeyboardAvoidingView
+      style={styles.chatContainer}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={90}>
+      {/* Chat header with selected member info */}
+      <View style={styles.chatHeader}>
+        <TouchableOpacity
+          onPress={deselectMember}
+          hitSlop={{top: 8, bottom: 8, left: 4, right: 4}}
+          style={styles.chatHeaderBack}>
+          <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
+        </TouchableOpacity>
+        <View style={styles.memberAvatarSmall}>
+          <Text
+            style={[
+              styles.memberAvatarTextSmall,
+              {color: getPlatformColor(selectedMember.platform)},
+            ]}>
+            {getInitials(selectedMember.name)}
+          </Text>
+          <View style={styles.memberOnlineDotSmall} />
+        </View>
+        <View style={styles.chatHeaderInfo}>
+          <Text style={styles.chatHeaderName} numberOfLines={1}>
+            {selectedMember.name || 'Admin'}
+          </Text>
+          <Text
+            style={[
+              styles.chatHeaderPlatform,
+              {color: getPlatformColor(selectedMember.platform)},
+            ]}>
+            {getPlatformLabel(selectedMember.platform)} · En linea
+          </Text>
+        </View>
+      </View>
+
+      <FlatList
+        ref={flatListRef}
+        data={messages}
+        keyExtractor={keyExtractor}
+        renderItem={renderMessage}
+        ListEmptyComponent={renderChatEmpty}
+        contentContainerStyle={
+          messages.length === 0 ? styles.chatEmptyList : styles.messagesList
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[primary]}
+            tintColor={primary}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+      />
+
+      {/* Input bar */}
+      <View style={styles.inputBar}>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            ref={inputRef}
+            style={styles.textInput}
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="Escribe un mensaje..."
+            placeholderTextColor={theme.colors.textLight}
+            multiline
+            maxLength={500}
+            editable={!sending}
+          />
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              (!inputText.trim() || sending) && styles.sendButtonDisabled,
+            ]}
+            onPress={sendMessage}
+            disabled={!inputText.trim() || sending}
+            activeOpacity={0.7}>
+            {sending ? (
+              <ActivityIndicator size="small" color={theme.colors.white} />
+            ) : (
+              <Ionicons name="send" size={20} color={theme.colors.white} />
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  );
+
+  // ─── Main Render ──────────────────────────────────────────────────────
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* Header */}
+      {!selectedMember ? (
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity
@@ -432,122 +603,34 @@ const AdminChatScreen = ({navigation}) => {
           </View>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Chat Admin</Text>
+            <View style={styles.statusRow}>
+              <View
+                style={[
+                  styles.statusDot,
+                  {
+                    backgroundColor: pusherConnected
+                      ? '#22C55E'
+                      : '#EF4444',
+                  },
+                ]}
+              />
+              <Text style={styles.headerSubtitle}>
+                {pusherConnected ? 'En linea' : 'Desconectado'}
+              </Text>
+              {onlineMembers.length > 0 && (
+                <Text style={styles.headerOnlineCount}>
+                  {' '}
+                  · {onlineMembers.length} en linea
+                </Text>
+              )}
+            </View>
           </View>
           <View style={styles.headerRight} />
         </View>
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color={primary} />
-          <Text style={styles.loaderText}>Cargando mensajes...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+      ) : null}
 
-  // ─── Main Render ──────────────────────────────────────────────────────
-
-  return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Custom Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            hitSlop={{top: 8, bottom: 8, left: 4, right: 4}}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Chat Admin</Text>
-          <View style={styles.statusRow}>
-            <View
-              style={[
-                styles.statusDot,
-                {backgroundColor: pusherConnected ? '#22C55E' : '#EF4444'},
-              ]}
-            />
-            <Text style={styles.headerSubtitle}>
-              {pusherConnected ? 'En linea' : 'Desconectado'}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            onPress={() => setShowMembers(!showMembers)}
-            hitSlop={{top: 8, bottom: 8, left: 4, right: 4}}>
-            <Ionicons name="people-outline" size={22} color={theme.colors.text} />
-            {onlineMembers.length > 0 && (
-              <View style={styles.onlineBadge}>
-                <Text style={styles.onlineBadgeText}>
-                  {onlineMembers.length}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Online members panel */}
-      {renderOnlinePanel()}
-
-      {/* Chat body */}
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={90}>
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={keyExtractor}
-          renderItem={renderMessage}
-          ListEmptyComponent={renderEmpty}
-          contentContainerStyle={
-            messages.length === 0
-              ? styles.emptyList
-              : styles.messagesList
-          }
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[primary]}
-              tintColor={primary}
-            />
-          }
-          showsVerticalScrollIndicator={false}
-          keyboardDismissMode="on-drag"
-          inverted={false}
-        />
-
-        {/* Input Bar */}
-        <View style={styles.inputBar}>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.textInput}
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder="Escribe un mensaje..."
-              placeholderTextColor={theme.colors.textLight}
-              multiline
-              maxLength={500}
-              editable={!sending}
-            />
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                (!inputText.trim() || sending) && styles.sendButtonDisabled,
-              ]}
-              onPress={sendMessage}
-              disabled={!inputText.trim() || sending}
-              activeOpacity={0.7}>
-              {sending ? (
-                <ActivityIndicator size="small" color={theme.colors.white} />
-              ) : (
-                <Ionicons name="send" size={20} color={theme.colors.white} />
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
+      {/* Content */}
+      {selectedMember ? renderChatView() : renderMembersList()}
     </SafeAreaView>
   );
 };
@@ -560,12 +643,12 @@ const createStyles = primary =>
       flex: 1,
       backgroundColor: theme.colors.background,
     },
-    container: {
+    chatContainer: {
       flex: 1,
       backgroundColor: theme.colors.background,
     },
 
-    // Header
+    // Header (no member selected)
     header: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -606,72 +689,151 @@ const createStyles = primary =>
       fontSize: theme.fontSize.xs,
       color: theme.colors.textSecondary,
     },
-    onlineBadge: {
-      position: 'absolute',
-      top: -4,
-      right: -6,
-      backgroundColor: '#22C55E',
-      borderRadius: 10,
-      minWidth: 16,
-      height: 16,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 4,
-    },
-    onlineBadgeText: {
-      fontSize: 9,
-      fontWeight: '700',
-      color: theme.colors.white,
+    headerOnlineCount: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textLight,
     },
 
-    // Online members panel
-    membersPanel: {
+    // Chat header (member selected)
+    chatHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
       backgroundColor: theme.colors.white,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
-      maxHeight: 200,
+      ...theme.shadows.sm,
     },
-    membersPanelHeader: {
+    chatHeaderBack: {
+      width: 32,
+    },
+    memberAvatarSmall: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: primary + '15',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: theme.spacing.sm,
+    },
+    memberAvatarTextSmall: {
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    memberOnlineDotSmall: {
+      position: 'absolute',
+      bottom: -1,
+      right: -1,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: '#22C55E',
+      borderWidth: 2,
+      borderColor: theme.colors.white,
+    },
+    chatHeaderInfo: {
+      flex: 1,
+      marginLeft: theme.spacing.sm,
+    },
+    chatHeaderName: {
+      fontSize: theme.fontSize.md,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    chatHeaderPlatform: {
+      fontSize: 11,
+      fontWeight: '600',
+      marginTop: 1,
+    },
+
+    // Online members list container
+    membersListContainer: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    membersListHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: theme.spacing.md,
       paddingVertical: theme.spacing.sm,
-      borderBottomWidth: StyleSheet.hairlineWidth,
+      backgroundColor: theme.colors.white,
+      borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
     },
-    membersPanelTitle: {
+    membersListHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    membersListTitle: {
       fontSize: theme.fontSize.sm,
       fontWeight: '700',
       color: theme.colors.text,
     },
-    membersEmpty: {
-      paddingVertical: theme.spacing.lg,
+    membersCountBadge: {
+      backgroundColor: '#22C55E',
+      borderRadius: 10,
+      minWidth: 18,
+      height: 18,
       alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 5,
+    },
+    membersCountText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: theme.colors.white,
+    },
+    membersListContent: {
+      paddingVertical: theme.spacing.xs,
+    },
+
+    // Members empty state
+    membersEmpty: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: theme.spacing.xl,
+      paddingVertical: theme.spacing.xxl,
+    },
+    membersEmptyTitle: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginTop: theme.spacing.md,
     },
     membersEmptyText: {
-      fontSize: theme.fontSize.sm,
-      color: theme.colors.textLight,
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      marginTop: theme.spacing.xs,
+      lineHeight: 22,
     },
+
+    // Member item
     memberItem: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: theme.spacing.md,
-      paddingVertical: theme.spacing.sm,
+      paddingVertical: theme.spacing.sm + 2,
+      marginHorizontal: theme.spacing.sm,
+      borderRadius: theme.borderRadius.md,
       gap: theme.spacing.sm,
+      backgroundColor: theme.colors.white,
+      marginBottom: 2,
     },
     memberAvatar: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: primary + '20',
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       alignItems: 'center',
       justifyContent: 'center',
     },
     memberAvatarText: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '700',
-      color: primary,
     },
     memberOnlineDot: {
       position: 'absolute',
@@ -703,50 +865,32 @@ const createStyles = primary =>
       color: theme.colors.textLight,
     },
 
-    // Loader
-    loaderContainer: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.colors.background,
-    },
-    loaderText: {
-      marginTop: theme.spacing.md,
-      fontSize: theme.fontSize.md,
-      color: theme.colors.textSecondary,
-    },
-
     // Messages list
     messagesList: {
       paddingHorizontal: theme.spacing.md,
       paddingTop: theme.spacing.sm,
       paddingBottom: theme.spacing.sm,
     },
-    emptyList: {
+    chatEmptyList: {
       flexGrow: 1,
       backgroundColor: theme.colors.background,
     },
 
-    // Empty state
-    emptyContainer: {
+    // Chat empty state
+    chatEmptyContainer: {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingHorizontal: theme.spacing.xl,
-      paddingVertical: theme.spacing.xxl,
+      gap: theme.spacing.sm,
     },
-    emptyTitle: {
-      fontSize: theme.fontSize.lg,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginTop: theme.spacing.md,
-    },
-    emptyText: {
+    chatEmptyTitle: {
       fontSize: theme.fontSize.md,
+      fontWeight: '500',
       color: theme.colors.textSecondary,
-      textAlign: 'center',
-      marginTop: theme.spacing.xs,
-      lineHeight: 22,
+    },
+    chatEmptyText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textLight,
     },
 
     // Date separator
@@ -805,7 +949,7 @@ const createStyles = primary =>
       color: theme.colors.text,
     },
 
-    // Bubble footer (sender name + role + time)
+    // Bubble footer
     bubbleFooter: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -822,11 +966,6 @@ const createStyles = primary =>
       fontSize: theme.fontSize.xs,
       fontWeight: '600',
       color: theme.colors.textSecondary,
-    },
-    senderRole: {
-      fontSize: 10,
-      color: theme.colors.textLight,
-      fontStyle: 'italic',
     },
     timeText: {
       fontSize: 10,

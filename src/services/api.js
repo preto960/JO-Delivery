@@ -509,16 +509,17 @@ const fetchChatMessages = async (orderId) => {
 };
 
 // Admin Chat
-const fetchAdminChatMessages = async () => {
+const fetchAdminChatMessages = async (recipientId) => {
   const api = await createApiClient();
   if (!api) throw new Error('No hay URL del servidor configurada');
-  return api.get('/chats/admin/messages');
+  const params = recipientId ? { recipientId: String(recipientId) } : {};
+  return api.get('/chats/admin/messages', { params });
 };
 
-const sendAdminChatMessage = async (content) => {
+const sendAdminChatMessage = async (content, recipientId, targetPlatform) => {
   const api = await createApiClient();
   if (!api) throw new Error('No hay URL del servidor configurada');
-  return api.post('/chats/admin/messages', { content });
+  return api.post('/chats/admin/messages', { content, recipientId, targetPlatform });
 };
 
 // Alias for backward compatibility
