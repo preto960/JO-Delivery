@@ -186,10 +186,9 @@ const AdminChatScreen = ({navigation}) => {
 
         const isForThisChat =
           (senderId === selectedNumericId &&
-            (recipientId === myUserId || recipientId === null)) ||
+            recipientId === myUserId) ||
           (senderId === myUserId &&
-            (recipientId === selectedNumericId ||
-              data.targetPlatform === selectedMember.platform));
+            recipientId === selectedNumericId);
 
         if (isForThisChat) {
           setMessages(prev => {
