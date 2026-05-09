@@ -508,6 +508,8 @@ const DeliveryOrdersScreen = () => {
         cancelText: 'Cancelar',
         onConfirm: () => {
           if (orderId) {
+            // Switch to my_deliveries tab since the order is assigned to this delivery
+            setActiveTab('my_deliveries');
             navigation.navigate('Chat', {
               orderId: orderId,
               orderNumber: String(orderId).slice(-6).toUpperCase(),
