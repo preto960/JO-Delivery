@@ -186,9 +186,11 @@ const AdminChatScreen = ({navigation}) => {
 
         const isForThisChat =
           (senderId === selectedNumericId &&
-            recipientId === myUserId) ||
+            recipientId === myUserId &&
+            data.senderPlatform === selectedMember.platform) ||
           (senderId === myUserId &&
-            recipientId === selectedNumericId);
+            recipientId === selectedNumericId &&
+            data.senderPlatform === THIS_PLATFORM);
 
         if (isForThisChat) {
           setMessages(prev => {
@@ -280,6 +282,8 @@ const AdminChatScreen = ({navigation}) => {
         recipientId,
         selectedMember.platform || 'all',
       );
+      // Optimistic: reload messages to show the sent message immediately
+      fetchMessages(true);
     } catch (err) {
       console.error('Error enviando mensaje admin:', err);
       setInputText(content);
