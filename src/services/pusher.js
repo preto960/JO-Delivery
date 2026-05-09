@@ -51,3 +51,13 @@ export function unsubscribeFromOrderChannel(pusher, orderId) {
   if (!pusher) return;
   pusher.unsubscribe(`private-order-${orderId}`);
 }
+
+export function subscribeToUserChannel(pusher, userId) {
+  if (!pusher || !userId) return null;
+  return pusher.subscribe(`private-user-${userId}`);
+}
+
+export function unsubscribeFromUserChannel(pusher, userId) {
+  if (!pusher || !userId) return;
+  pusher.unsubscribe(`private-user-${userId}`);
+}

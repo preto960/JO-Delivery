@@ -14,6 +14,7 @@ import {
   Animated,
   DeviceEventEmitter,
   Switch,
+  Alert,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useRoute, useIsFocused} from '@react-navigation/native';
@@ -22,6 +23,11 @@ import MapView, {Marker, Polyline, PROVIDER_GOOGLE} from 'react-native-maps';
 import {useAuth} from '@context/AuthContext';
 import {useConfig} from '@context/ConfigContext';
 import apiService from '@services/api';
+import {
+  getPusherClient,
+  subscribeToUserChannel,
+  unsubscribeFromUserChannel,
+} from '@services/pusher';
 import {formatPrice} from '@utils/helpers';
 import ENV from '@config/env';
 import theme from '@theme/styles';
@@ -208,7 +214,7 @@ const DeliveryOrdersScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const isFocused = useIsFocused();
-  const {user, logout, fetchProfile} = useAuth();
+  const {user, logout, fetchProfile, token} = useAuth();
   const {primary} = useThemeColors();
   const styles = useMemo(() => createStyles(primary), [primary]);
 
@@ -481,6 +487,36 @@ const DeliveryOrdersScreen = () => {
     });
     return () => subscription.remove();
   }, [loadOrders]);
+
+  // Escuchar mensajes de chat de orden via Pusher (canal de usuario)
+  useEffect(() => {
+    if (!token || !user?.id) return;
+
+    const pusher = getPusherClient(token);
+    const channel = subscribeToUserChannel(pusher, user.id);
+    if (!channel) return;
+
+    channel.bind('order-message', (data) => {
+      const senderName = data?.senderName || 'Cliente';
+      const orderId = data?.orderId;
+      Alert.alert(
+        'Nuevo mensaje',
+        `${senderName} te escribio en la orden #${String(orderId || '').slice(-6)}`,
+        [
+          { text: 'OK', style: 'default' },
+        ],
+      );
+      DeviceEventEmitter.emit('pushNotificationReceived', {
+        type: 'new_order',
+        orderId,
+      });
+    });
+
+    return () => {
+      channel.unbind('order-message');
+      unsubscribeFromUserChannel(pusher, user.id);
+    };
+  }, [token, user?.id]);
 
   // Escuchar accion del boton "Ver" del modal de notificacion (cuando ya estamos en esta pantalla)
   // PRIMERO refresca la lista, LUEGO aplica el highlight/parpadeo
