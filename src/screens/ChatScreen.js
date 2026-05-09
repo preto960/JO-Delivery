@@ -145,7 +145,7 @@ export default function ChatScreen({route, navigation}) {
     }
   }, [messages]);
 
-  const isOwnMessage = msg => msg.senderRole === 'delivery';
+  const isOwnMessage = msg => String(msg.senderId) === String(user?.id);
 
   const renderMessage = useCallback(
     ({item}) => {
@@ -182,7 +182,7 @@ export default function ChatScreen({route, navigation}) {
         </View>
       );
     },
-    [otherUserName],
+    [otherUserName, user?.id],
   );
 
   const renderEmptyChat = () => {
