@@ -82,7 +82,11 @@ const AdminChatScreen = ({navigation}) => {
       try {
         if (!isBackground) setLoading(true);
         const recipientId = parseInt(selectedMember.id.split('-')[0]);
-        const res = await apiService.fetchAdminChatMessages(recipientId);
+        const res = await apiService.fetchAdminChatMessages(
+          recipientId,
+          THIS_PLATFORM,
+          selectedMember.platform || 'all',
+        );
 
         if (!isMountedRef.current) return;
 
@@ -186,11 +190,11 @@ const AdminChatScreen = ({navigation}) => {
 
         const isForThisChat =
           (senderId === selectedNumericId &&
-            recipientId === myUserId &&
-            data.senderPlatform === selectedMember.platform) ||
+            data.senderPlatform === selectedMember.platform &&
+            data.targetPlatform === THIS_PLATFORM) ||
           (senderId === myUserId &&
-            recipientId === selectedNumericId &&
-            data.senderPlatform === THIS_PLATFORM);
+            data.senderPlatform === THIS_PLATFORM &&
+            data.targetPlatform === selectedMember.platform);
 
         if (isForThisChat) {
           setMessages(prev => {
