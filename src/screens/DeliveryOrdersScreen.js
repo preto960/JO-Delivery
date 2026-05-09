@@ -499,16 +499,22 @@ const DeliveryOrdersScreen = () => {
     channel.bind('order-message', (data) => {
       const senderName = data?.senderName || 'Cliente';
       const orderId = data?.orderId;
-      Alert.alert(
-        'Nuevo mensaje',
-        `${senderName} te escribio en la orden #${String(orderId || '').slice(-6)}`,
-        [
-          { text: 'OK', style: 'default' },
-        ],
-      );
-      DeviceEventEmitter.emit('pushNotificationReceived', {
-        type: 'new_order',
-        orderId,
+      setConfirmModal({
+        visible: true,
+        type: 'confirm',
+        title: 'Nuevo mensaje',
+        message: `${senderName} te escribio en la orden #${String(orderId || '').slice(-6)}`,
+        confirmText: 'Ver',
+        cancelText: 'Cancelar',
+        onConfirm: () => {
+          if (orderId) {
+            navigation.navigate('Chat', {
+              orderId: orderId,
+              orderNumber: String(orderId).slice(-6).toUpperCase(),
+              otherUserName: senderName,
+            });
+          }
+        },
       });
     });
 
