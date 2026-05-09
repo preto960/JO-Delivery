@@ -129,7 +129,7 @@ export default function ChatScreen({route, navigation}) {
     setInputText('');
     setSending(true);
     try {
-      await apiService.sendChatMessage(orderId, content, 'delivery');
+      await apiService.sendChatMessage(orderId, content);
     } catch (err) {
       console.error('Error sending message:', err);
       setInputText(content);

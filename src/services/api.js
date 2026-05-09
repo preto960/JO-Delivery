@@ -497,16 +497,21 @@ const fetchLocationHistory = async (orderId) => {
 
 // ==================== CHAT ====================
 
-const sendChatMessage = async (orderId, content, senderRole) => {
+const sendChatMessage = async (orderId, content) => {
   const api = await createApiClient();
   if (!api) throw new Error('No hay URL del servidor configurada');
-  return api.post('/chats/messages', {orderId, content, senderRole});
+  return api.post(`/chats/orders/${orderId}/messages`, {content});
 };
 
 const fetchChatMessages = async (orderId) => {
   const api = await createApiClient();
   if (!api) throw new Error('No hay URL del servidor configurada');
-  return api.get(`/chats/conversations/${orderId}`);
+  const res = await api.get(`/chats/orders/${orderId}/messages`);
+  // Backend returns { data: [...messages], pagination: {...} }
+  if (res && res.data) {
+    return { messages: res.data };
+  }
+  return { messages: [] };
 };
 
 // Admin Chat
