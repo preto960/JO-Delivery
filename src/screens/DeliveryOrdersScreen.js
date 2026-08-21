@@ -193,7 +193,7 @@ const requestLocationPermission = async (shopName = 'JO-Shop') => {
   }
 };
 
-/** Get current device position */
+/** Get current device position using react-native-maps native location */
 const getCurrentPosition = () => {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -206,6 +206,19 @@ const getCurrentPosition = () => {
       {enableHighAccuracy: true, timeout: 20000, maximumAge: 5000},
     );
   });
+};
+
+/** Fetch route once we have user location from MapView */
+const fetchRouteOnceReady = async (userPos, mapCoords, setRoutePoints, setRouteData, setUserLocation, setMapRegion) => {
+  if (!userPos || !mapCoords) return;
+  setUserLocation(userPos);
+  const route = await fetchRouteDirections(userPos, mapCoords);
+  if (route) {
+    setRoutePoints(route.points);
+    setRouteData({ distance: route.distance, duration: route.duration });
+    const region = fitTwoPoints(userPos, mapCoords);
+    setMapRegion(region);
+  }
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -692,36 +705,16 @@ const DeliveryOrdersScreen = () => {
         longitudeDelta: 0.008,
       });
 
-      // Step 2: Try to get user location and route
+      // Step 2: Request location permission for MapView native tracking
       setRouteLoading(true);
       try {
-        const hasPermission = await requestLocationPermission(config.shop_name || 'JO-Shop');
-        if (hasPermission) {
-          const userCoords = await getCurrentPosition();
-          const userPos = {
-            latitude: userCoords.latitude,
-            longitude: userCoords.longitude,
-          };
-          setUserLocation(userPos);
-
-          // Step 3: Fetch route
-          const route = await fetchRouteDirections(userPos, coords);
-          if (route) {
-            setRoutePoints(route.points);
-            setRouteData({
-              distance: route.distance,
-              duration: route.duration,
-            });
-            // Fit map to show both points
-            const region = fitTwoPoints(userPos, coords);
-            setMapRegion(region);
-          }
-        }
-      } catch (err) {
-        console.warn('[Map] No se pudo obtener ubicación/ruta:', err?.message || err);
+        await requestLocationPermission(config?.shop_name || 'JO-Shop');
+      } catch {
+        // Permission denied - MapView still shows native blue dot
       } finally {
         setRouteLoading(false);
       }
+      // Route will be fetched via onUserLocationChange once MapView provides GPS
     } else {
       // Geocoding failed, show error in map
       setMapLoading(false);
@@ -1215,6 +1208,16 @@ const DeliveryOrdersScreen = () => {
               style={styles.mapView}
               region={mapRegion}
               onRegionChangeComplete={region => setMapRegion(region)}
+              onUserLocationChange={event => {
+                if (!event?.nativeEvent?.coordinate) return;
+                const pos = event.nativeEvent.coordinate;
+                const userPos = { latitude: pos.latitude, longitude: pos.longitude };
+                if (!userLocation) {
+                  // First location fix - fetch route
+                  setUserLocation(userPos);
+                  fetchRouteOnceReady(userPos, mapCoords, setRoutePoints, setRouteData, setUserLocation, setMapRegion);
+                }
+              }}
               showsUserLocation={true}
               showsMyLocationButton={true}
               showsCompass
