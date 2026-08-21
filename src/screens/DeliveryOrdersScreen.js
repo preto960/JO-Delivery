@@ -215,6 +215,7 @@ const DeliveryOrdersScreen = () => {
   const route = useRoute();
   const isFocused = useIsFocused();
   const {user, logout, fetchProfile, token} = useAuth();
+  const {config} = useConfig();
   const {primary} = useThemeColors();
   const styles = useMemo(() => createStyles(primary), [primary]);
 
