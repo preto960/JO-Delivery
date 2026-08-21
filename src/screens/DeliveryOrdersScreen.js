@@ -760,6 +760,30 @@ const DeliveryOrdersScreen = () => {
     setMapRegion(region);
   }, [userLocation, mapCoords]);
 
+  // Fetch route when both user location and destination coords are available
+  const routeFetchedRef = useRef(false);
+  useEffect(() => {
+    if (userLocation && mapCoords && mapModal.visible && !routeFetchedRef.current) {
+      routeFetchedRef.current = true;
+      setRouteLoading(true);
+      fetchRouteDirections(userLocation, mapCoords).then(route => {
+        if (route) {
+          setRoutePoints(route.points);
+          setRouteData({ distance: route.distance, duration: route.duration });
+          const region = fitTwoPoints(userLocation, mapCoords);
+          setMapRegion(region);
+        }
+      }).catch(() => {}).finally(() => setRouteLoading(false));
+    }
+  }, [userLocation, mapCoords, mapModal.visible]);
+
+  // Reset route flag when map closes
+  useEffect(() => {
+    if (!mapModal.visible) {
+      routeFetchedRef.current = false;
+    }
+  }, [mapModal.visible]);
+
   // ─── Order Actions ───────────────────────────────────────────────────────
 
   const handleAcceptOrder = useCallback(
@@ -1209,14 +1233,9 @@ const DeliveryOrdersScreen = () => {
               region={mapRegion}
               onRegionChangeComplete={region => setMapRegion(region)}
               onUserLocationChange={event => {
-                if (!event?.nativeEvent?.coordinate) return;
-                const pos = event.nativeEvent.coordinate;
-                const userPos = { latitude: pos.latitude, longitude: pos.longitude };
-                if (!userLocation) {
-                  // First location fix - fetch route
-                  setUserLocation(userPos);
-                  fetchRouteOnceReady(userPos, mapCoords, setRoutePoints, setRouteData, setUserLocation, setMapRegion);
-                }
+                const coord = event?.nativeEvent?.coordinate;
+                if (!coord) return;
+                setUserLocation({ latitude: coord.latitude, longitude: coord.longitude });
               }}
               showsUserLocation={true}
               showsMyLocationButton={true}
