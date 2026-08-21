@@ -784,8 +784,10 @@ const DeliveryOrdersScreen = () => {
             showToast('Pedido aceptado correctamente. ¡En camino!');
             // Iniciar rastreo GPS para esta entrega
             startTracking(order.id).catch(() => {});
-            // Recargar lista
-            setTimeout(() => loadOrders(true), 300);
+            // Cambiar a Mis entregas y highlight del pedido aceptado
+            pendingHighlightRef.current = String(order.id);
+            setHighlightOrderId(String(order.id));
+            setActiveTab('my_deliveries');
           } catch (err) {
             const msg = err?.message || 'Error al aceptar el pedido';
             if (err?.response?.data?.code === 'ORDER_ALREADY_ASSIGNED') {
