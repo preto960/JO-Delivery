@@ -203,7 +203,7 @@ const getCurrentPosition = () => {
     navigator.geolocation.getCurrentPosition(
       position => resolve(position.coords),
       error => reject(error),
-      {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+      {enableHighAccuracy: true, timeout: 20000, maximumAge: 5000},
     );
   });
 };
@@ -716,8 +716,8 @@ const DeliveryOrdersScreen = () => {
             setMapRegion(region);
           }
         }
-      } catch {
-        // Cannot get location - just show destination marker
+      } catch (err) {
+        console.warn('[Map] No se pudo obtener ubicación/ruta:', err?.message || err);
       } finally {
         setRouteLoading(false);
       }
@@ -1214,8 +1214,8 @@ const DeliveryOrdersScreen = () => {
               style={styles.mapView}
               region={mapRegion}
               onRegionChangeComplete={region => setMapRegion(region)}
-              showsUserLocation={!!userLocation}
-              showsMyLocationButton={false}
+              showsUserLocation={true}
+              showsMyLocationButton={true}
               showsCompass
               showsBuildings
               showsTraffic
