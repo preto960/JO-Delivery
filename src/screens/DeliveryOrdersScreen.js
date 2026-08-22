@@ -416,6 +416,7 @@ const DeliveryOrdersScreen = () => {
   const [mapModal, setMapModal] = useState({
     visible: false,
     address: '',
+    orderId: null,
   });
 
   // Native map state
@@ -426,6 +427,7 @@ const DeliveryOrdersScreen = () => {
   const [routePoints, setRoutePoints] = useState([]);
   const [mapLoading, setMapLoading] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
+  const lastLocationSentRef = useRef(null); // throttle location sends to backend
 
   const flatListRef = useRef(null);
   const mapViewRef = useRef(null);
@@ -735,7 +737,7 @@ const DeliveryOrdersScreen = () => {
     if (!address) return;
 
     // Open modal immediately
-    setMapModal({visible: true, address});
+    setMapModal({visible: true, address, orderId});
     setMapCoords(null);
     setMapRegion(null);
     setRouteData(null);
@@ -773,12 +775,13 @@ const DeliveryOrdersScreen = () => {
   }, []);
 
   const handleCloseMap = useCallback(() => {
-    setMapModal({visible: false, address: ''});
+    setMapModal({visible: false, address: '', orderId: null});
     setMapCoords(null);
     setMapRegion(null);
     setRouteData(null);
     setRoutePoints([]);
     setUserLocation(null);
+    lastLocationSentRef.current = null;
   }, []);
 
   const handleNavigateExternal = useCallback(() => {
@@ -1060,7 +1063,7 @@ const DeliveryOrdersScreen = () => {
 
             <TouchableOpacity
               style={[styles.infoRow, styles.addressRowTouchable]}
-              onPress={() => handleOpenMap(item.address)}
+              onPress={() => handleOpenMap(item.address, item.id)}
               activeOpacity={0.7}>
               <Icon
                 name="location-outline"
@@ -1113,7 +1116,7 @@ const DeliveryOrdersScreen = () => {
                     styles.mapButton,
                     !localOnline && styles.actionButtonDisabled,
                   ]}
-                  onPress={() => handleOpenMap(item.address)}
+                  onPress={() => handleOpenMap(item.address, item.id)}
                   disabled={!localOnline}
                   activeOpacity={localOnline ? 0.8 : 1}>
                   <Icon name="map-outline" size={16} color={theme.colors.white} />
@@ -1281,6 +1284,22 @@ const DeliveryOrdersScreen = () => {
                 const pos = { latitude: coord.latitude, longitude: coord.longitude };
                 userLocationRef.current = pos;
                 setUserLocation(pos);
+
+                // Send location to backend for customer tracking (throttled ~15s)
+                if (mapModal.orderId) {
+                  const now = Date.now();
+                  const last = lastLocationSentRef.current;
+                  if (!last || now - last > 15000) {
+                    lastLocationSentRef.current = now;
+                    apiService.sendLocationUpdate(
+                      mapModal.orderId,
+                      pos.latitude,
+                      pos.longitude,
+                    ).catch(err => {
+                      console.error('[Map] Error sending location to backend:', err);
+                    });
+                  }
+                }
               }}
               showsUserLocation={true}
               showsMyLocationButton={false}
