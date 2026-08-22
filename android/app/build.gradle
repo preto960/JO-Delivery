@@ -62,11 +62,6 @@ dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation "com.facebook.react:react-android:+"
     implementation "com.facebook.react:hermes-android:+"
-
-    // Force consistent Google Play Services version to avoid GoogleApiClient conflicts
-    implementation "com.google.android.gms:play-services-base:18.5.0"
-    implementation "com.google.android.gms:play-services-location:21.3.0"
-    implementation "com.google.android.gms:play-services-maps:18.2.0"
 }
 
 // Auto-linking: genera PackageList.js automaticamente

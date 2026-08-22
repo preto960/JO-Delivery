@@ -241,18 +241,19 @@ const promptEnableLocation = () => {
   });
 };
 
-/** Get current device position using react-native-maps native location */
+/** Get current device position using @react-native-community/geolocation */
 const getCurrentPosition = () => {
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Geolocation no disponible'));
-      return;
+    try {
+      const Geolocation = require('@react-native-community/geolocation');
+      Geolocation.getCurrentPosition(
+        position => resolve(position.coords),
+        error => reject(error),
+        {enableHighAccuracy: true, timeout: 15000, maximumAge: 5000},
+      );
+    } catch (e) {
+      reject(new Error('Geolocation no disponible: ' + (e?.message || '')));
     }
-    navigator.geolocation.getCurrentPosition(
-      position => resolve(position.coords),
-      error => reject(error),
-      {enableHighAccuracy: true, timeout: 20000, maximumAge: 5000},
-    );
   });
 };
 
@@ -754,16 +755,21 @@ const DeliveryOrdersScreen = () => {
         longitudeDelta: 0.008,
       });
 
-      // Step 2: Request location permission (handles both app permission + system location)
+      // Step 2: Get GPS position for driver marker and route
       setRouteLoading(true);
       try {
-        await requestLocationPermission(config?.shop_name || 'JO-Shop');
-      } catch {
-        // Permission denied
+        const hasPermission = await requestLocationPermission(config?.shop_name || 'JO-Shop');
+        if (hasPermission) {
+          const userCoords = await getCurrentPosition();
+          const userPos = { latitude: userCoords.latitude, longitude: userCoords.longitude };
+          setUserLocation(userPos);
+          userLocationRef.current = userPos;
+        }
+      } catch (err) {
+        console.warn('[Map] GPS:', err?.message || err);
       } finally {
         setRouteLoading(false);
       }
-      // Route will be fetched via onUserLocationChange once MapView provides GPS
     } else {
       // Geocoding failed, show error in map
       setMapLoading(false);
@@ -1275,14 +1281,7 @@ const DeliveryOrdersScreen = () => {
               style={styles.mapView}
               region={mapRegion}
               onRegionChangeComplete={region => setMapRegion(region)}
-              onUserLocationChange={event => {
-                const coord = event?.nativeEvent?.coordinate;
-                if (!coord) return;
-                const pos = { latitude: coord.latitude, longitude: coord.longitude };
-                userLocationRef.current = pos;
-                setUserLocation(pos);
-              }}
-              showsUserLocation={true}
+              showsUserLocation={false}
               showsMyLocationButton={false}
               showsCompass={false}
               showsBuildings
