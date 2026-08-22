@@ -486,7 +486,7 @@ const deleteBatch = async (batchId) => {
 const sendLocationUpdate = async (orderId, latitude, longitude) => {
   const api = await createApiClient();
   if (!api) return; // Silent fail for tracking
-  return api.post('/tracking/location', {orderId, lat, lng});
+  return api.post('/tracking/location', {orderId, lat: latitude, lng: longitude});
 };
 
 const fetchLocationHistory = async (orderId) => {
