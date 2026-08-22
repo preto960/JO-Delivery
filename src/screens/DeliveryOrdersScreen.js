@@ -173,10 +173,11 @@ const fitTwoPoints = (pointA, pointB) => {
   };
 };
 
-/** Request Android location permission */
+/** Request Android location permission and ensure system location is enabled */
 const requestLocationPermission = async (shopName = 'JO-Shop') => {
   if (Platform.OS !== 'android') return true;
   try {
+    // Step 1: Request app permission
     const granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
       {
@@ -187,10 +188,34 @@ const requestLocationPermission = async (shopName = 'JO-Shop') => {
         buttonPositive: 'Permitir',
       },
     );
-    return granted === PermissionsAndroid.RESULTS.GRANTED;
+    if (granted !== PermissionsAndroid.RESULTS.GRANTED) return false;
+
+    // Step 2: If GoogleApiClient had issues, guide user to enable location
+    // This handles Xiaomi/Redmi and other devices where location must be on separately
+    return true;
   } catch {
     return false;
   }
+};
+
+/** Prompt user to enable system location (for devices where it's off) */
+const promptEnableLocation = () => {
+  return new Promise(resolve => {
+    Alert.alert(
+      'Ubicacion desactivada',
+      'Para mostrar tu posicion y la ruta de entrega necesitas activar la ubicacion de tu telefono.',
+      [
+        {text: 'Cancelar', style: 'cancel', onPress: () => resolve(false)},
+        {
+          text: 'Activar ubicacion',
+          onPress: () => {
+            Linking.openURL('android.settings.LOCATION_SOURCE_SETTINGS').catch(() => {});
+            resolve(true);
+          },
+        },
+      ],
+    );
+  });
 };
 
 /** Get current device position using react-native-maps native location */
@@ -380,6 +405,7 @@ const DeliveryOrdersScreen = () => {
 
   const flatListRef = useRef(null);
   const mapViewRef = useRef(null);
+  const userLocationRef = useRef(null);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({visible: true, message, type});
@@ -708,9 +734,18 @@ const DeliveryOrdersScreen = () => {
       // Step 2: Request location permission for MapView native tracking
       setRouteLoading(true);
       try {
-        await requestLocationPermission(config?.shop_name || 'JO-Shop');
+        const hasPermission = await requestLocationPermission(config?.shop_name || 'JO-Shop');
+        if (hasPermission) {
+          // Wait a bit to see if MapView gets location
+          // If not, user likely needs to enable system location
+          setTimeout(() => {
+            if (!userLocationRef.current) {
+              promptEnableLocation();
+            }
+          }, 4000);
+        }
       } catch {
-        // Permission denied - MapView still shows native blue dot
+        // Permission denied
       } finally {
         setRouteLoading(false);
       }
@@ -1209,13 +1244,7 @@ const DeliveryOrdersScreen = () => {
             <Icon name="arrow-back" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.mapTitle} numberOfLines={1}>Ubicación de entrega</Text>
-          <TouchableOpacity
-            onPress={handleNavigateExternal}
-            hitSlop={{top: 8, bottom: 8, left: 4, right: 4}}
-            disabled={!mapCoords}
-            style={[styles.mapNavigateBtn, !mapCoords && styles.mapBtnDisabled]}>
-            <Icon name="navigate" size={20} color={mapCoords ? theme.colors.white : theme.colors.textLight} />
-          </TouchableOpacity>
+          <View style={{width: 32}} />
         </View>
 
         {/* Map View */}
@@ -1235,13 +1264,17 @@ const DeliveryOrdersScreen = () => {
               onUserLocationChange={event => {
                 const coord = event?.nativeEvent?.coordinate;
                 if (!coord) return;
-                setUserLocation({ latitude: coord.latitude, longitude: coord.longitude });
+                const pos = { latitude: coord.latitude, longitude: coord.longitude };
+                userLocationRef.current = pos;
+                setUserLocation(pos);
               }}
               showsUserLocation={true}
-              showsMyLocationButton={true}
-              showsCompass
+              showsMyLocationButton={false}
+              showsCompass={false}
               showsBuildings
-              showsTraffic
+              showsTraffic={false}
+              zoomControlsEnabled={false}
+              toolbarEnabled={false}
               loadingEnabled
               loadingIndicatorColor={primary}>
               {/* Delivery destination marker */}
@@ -1357,18 +1390,6 @@ const DeliveryOrdersScreen = () => {
             </Text>
           </View>
 
-          {/* Navigate button */}
-          {mapCoords && (
-            <TouchableOpacity
-              style={styles.navigateButton}
-              onPress={handleNavigateExternal}
-              activeOpacity={0.8}>
-              <Icon name="navigate" size={20} color={theme.colors.white} />
-              <Text style={styles.navigateButtonText}>
-                Navegar con {Platform.OS === 'ios' ? 'Maps' : 'Google Maps'}
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
       </SafeAreaView>
     </Modal>
