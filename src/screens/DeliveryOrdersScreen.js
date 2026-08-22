@@ -733,7 +733,7 @@ const DeliveryOrdersScreen = () => {
 
   // ─── Map Actions ─────────────────────────────────────────────────────────
 
-  const handleOpenMap = useCallback(async (address) => {
+  const handleOpenMap = useCallback(async (address, orderId) => {
     if (!address) return;
 
     // Open modal immediately
