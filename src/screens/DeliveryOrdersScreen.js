@@ -241,7 +241,7 @@ const promptEnableLocation = () => {
   });
 };
 
-/** Get current device position using @react-native-community/geolocation */
+/** Get current device position (fallback) */
 const getCurrentPosition = () => {
   return new Promise((resolve, reject) => {
     try {
@@ -251,8 +251,8 @@ const getCurrentPosition = () => {
         error => reject(error),
         {enableHighAccuracy: true, timeout: 15000, maximumAge: 5000},
       );
-    } catch (e) {
-      reject(new Error('Geolocation no disponible: ' + (e?.message || '')));
+    } catch {
+      reject(new Error('Geolocation no disponible'));
     }
   });
 };
@@ -755,21 +755,15 @@ const DeliveryOrdersScreen = () => {
         longitudeDelta: 0.008,
       });
 
-      // Step 2: Get GPS position for driver marker and route
+      // Step 2: Request permission and let MapView handle GPS via showsUserLocation
       setRouteLoading(true);
       try {
-        const hasPermission = await requestLocationPermission(config?.shop_name || 'JO-Shop');
-        if (hasPermission) {
-          const userCoords = await getCurrentPosition();
-          const userPos = { latitude: userCoords.latitude, longitude: userCoords.longitude };
-          setUserLocation(userPos);
-          userLocationRef.current = userPos;
-        }
-      } catch (err) {
-        console.warn('[Map] GPS:', err?.message || err);
+        await requestLocationPermission(config?.shop_name || 'JO-Shop');
+      } catch {
       } finally {
         setRouteLoading(false);
       }
+      // Route will be fetched via useEffect once both userLocation and mapCoords are ready
     } else {
       // Geocoding failed, show error in map
       setMapLoading(false);
@@ -1281,7 +1275,14 @@ const DeliveryOrdersScreen = () => {
               style={styles.mapView}
               region={mapRegion}
               onRegionChangeComplete={region => setMapRegion(region)}
-              showsUserLocation={false}
+              onUserLocationChange={event => {
+                const coord = event?.nativeEvent?.coordinate;
+                if (!coord) return;
+                const pos = { latitude: coord.latitude, longitude: coord.longitude };
+                userLocationRef.current = pos;
+                setUserLocation(pos);
+              }}
+              showsUserLocation={true}
               showsMyLocationButton={false}
               showsCompass={false}
               showsBuildings
