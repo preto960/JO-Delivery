@@ -192,15 +192,8 @@ const requestLocationPermission = async (shopName = 'JO-Shop') => {
 
     // Step 2: Check if system location is enabled, if not prompt with native dialog
     try {
-      const LocationEnabler = require('react-native-location-enabler');
-      const result = await LocationEnabler.promptForEnableLocationIfNeeded({
-        rationale: {
-          title: 'Activar ubicacion',
-          message: 'Para mostrar tu posicion y la ruta de entrega necesitas activar la ubicacion de tu telefono.',
-          buttonPositive: 'Aceptar',
-          buttonNegative: 'Cancelar',
-        },
-      });
+      const {promptForEnableLocationIfNeeded} = require('react-native-location-enabler');
+      await promptForEnableLocationIfNeeded();
       return true;
     } catch (e) {
       // User cancelled or module not available
