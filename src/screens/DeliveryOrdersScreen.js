@@ -198,18 +198,34 @@ const requestLocationPermission = async (shopName = 'JO-Shop') => {
   }
 };
 
-/** Prompt user to enable system location (for devices where it's off) */
+/** Prompt user to enable system location with multiple fallback methods */
 const promptEnableLocation = () => {
   return new Promise(resolve => {
     Alert.alert(
       'Ubicacion desactivada',
-      'Para mostrar tu posicion y la ruta de entrega necesitas activar la ubicacion de tu telefono.',
+      'Para mostrar tu posicion y la ruta necesitas activar la ubicacion del telefono.\n\nVe a: Ajustes > Ubicacion > activarla',
       [
-        {text: 'Cancelar', style: 'cancel', onPress: () => resolve(false)},
+        {text: 'Cerrar', style: 'cancel', onPress: () => resolve(false)},
         {
-          text: 'Activar ubicacion',
-          onPress: () => {
-            Linking.openURL('android.settings.LOCATION_SOURCE_SETTINGS').catch(() => {});
+          text: 'Ir a Ajustes',
+          onPress: async () => {
+            // Try multiple methods to open location settings (Xiaomi/Redmi compatible)
+            let opened = false;
+            const methods = [
+              () => Linking.openURL('android.settings.LOCATION_SOURCE_SETTINGS'),
+              () => Linking.openURL('settings:navigation'),
+              () => Linking.openSettings(),
+            ];
+            for (const method of methods) {
+              try {
+                await method();
+                opened = true;
+                break;
+              } catch {}
+            }
+            if (!opened) {
+              Alert.alert('Ajustes manuales', 'Ve a Ajustes > Ubicacion y activa la ubicacion.');
+            }
             resolve(true);
           },
         },
