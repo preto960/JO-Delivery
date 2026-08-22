@@ -185,14 +185,28 @@ const requestLocationPermission = async (shopName = 'JO-Shop') => {
         message: `${shopName} necesita acceso a tu ubicacion para mostrar la ruta de entrega.`,
         buttonNeutral: 'Preguntar despues',
         buttonNegative: 'Cancelar',
-        buttonPositive: 'Permitir',
+        buttonPositive: 'Aceptar',
       },
     );
     if (granted !== PermissionsAndroid.RESULTS.GRANTED) return false;
 
-    // Step 2: If GoogleApiClient had issues, guide user to enable location
-    // This handles Xiaomi/Redmi and other devices where location must be on separately
-    return true;
+    // Step 2: Check if system location is enabled, if not prompt with native dialog
+    try {
+      const LocationEnabler = require('react-native-location-enabler');
+      const result = await LocationEnabler.promptForEnableLocationIfNeeded({
+        rationale: {
+          title: 'Activar ubicacion',
+          message: 'Para mostrar tu posicion y la ruta de entrega necesitas activar la ubicacion de tu telefono.',
+          buttonPositive: 'Aceptar',
+          buttonNegative: 'Cancelar',
+        },
+      });
+      return true;
+    } catch (e) {
+      // User cancelled or module not available
+      console.warn('[Location] promptForEnableLocationIfNeeded:', e?.message);
+      return false;
+    }
   } catch {
     return false;
   }
@@ -747,19 +761,10 @@ const DeliveryOrdersScreen = () => {
         longitudeDelta: 0.008,
       });
 
-      // Step 2: Request location permission for MapView native tracking
+      // Step 2: Request location permission (handles both app permission + system location)
       setRouteLoading(true);
       try {
-        const hasPermission = await requestLocationPermission(config?.shop_name || 'JO-Shop');
-        if (hasPermission) {
-          // Wait a bit to see if MapView gets location
-          // If not, user likely needs to enable system location
-          setTimeout(() => {
-            if (!userLocationRef.current) {
-              promptEnableLocation();
-            }
-          }, 4000);
-        }
+        await requestLocationPermission(config?.shop_name || 'JO-Shop');
       } catch {
         // Permission denied
       } finally {
