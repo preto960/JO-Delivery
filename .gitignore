@@ -67,3 +67,7 @@ repos/
 prisma/
 prisma.config.ts
 vercel.json
+
+# Firma Android — nunca commitear claves ni credenciales
+*.keystore
+keystore.properties

@@ -93,9 +93,11 @@ const VerificationScreen = ({route, navigation}) => {
     // Para TOTP no se inicia cooldown porque no se envía código
   }, []);
 
-  // Auto-rellenar OTP en modo desarrollo
+  // Auto-rellenar OTP SOLO en desarrollo.
+  // En producción el código llega por email/authenticator y nunca debe
+  // tomarse de la respuesta del API (anularía el 2FA).
   useEffect(() => {
-    if (otpCode && type === 'login') {
+    if (__DEV__ && otpCode && type === 'login') {
       const codeStr = String(otpCode);
       const newOtp = ['' , '', '', '', '', ''];
       for (let i = 0; i < codeStr.length && i < OTP_LENGTH; i++) {
@@ -117,9 +119,10 @@ const VerificationScreen = ({route, navigation}) => {
         setResendCooldown(RESEND_COOLDOWN);
       }
     } catch (err) {
-      // En desarrollo, el codigo viene en la respuesta
+      // En desarrollo el backend puede devolver el código en el error; nunca se
+      // usa en producción (solo __DEV__). El código real debe llegar por email.
       const responseData = err.response?.data;
-      if (responseData?.code && mountedRef.current) {
+      if (__DEV__ && responseData?.code && mountedRef.current) {
         // Llenar campos automaticamente en desarrollo
         const codeStr = String(responseData.code);
         const newOtp = [...otp];
@@ -171,7 +174,6 @@ const VerificationScreen = ({route, navigation}) => {
 
   const handleVerify = async () => {
     const code = otp.join('');
-    console.log('[VerificationScreen] handleVerify - code length:', code.length, 'type:', type, 'email:', displayEmail);
     if (code.length !== OTP_LENGTH) {
       Alert.alert('Codigo incompleto', 'Ingresa los 6 digitos del codigo de verificacion.');
       return;
@@ -183,16 +185,13 @@ const VerificationScreen = ({route, navigation}) => {
     try {
       if (type === 'login') {
         // Flujo de login: verificar OTP via loginWithOtp
-        console.log('[VerificationScreen] Llamando loginWithOtp con email:', displayEmail, 'code:', code, 'type:', twoFactorType);
         const result = await loginWithOtp(displayEmail, code, twoFactorType);
-        console.log('[VerificationScreen] loginWithOtp result:', JSON.stringify(result));
         if (!result.success) {
           Alert.alert('Error', result.error || 'Error al verificar el código');
           if (mountedRef.current) setLoading(false);
           return;
         }
         // Login exitoso: el estado de autenticación cambia y AppNavigator redirige automáticamente
-        console.log('[VerificationScreen] Login exitoso con OTP, redirigiendo...');
       } else {
         // Flujo de registro / reset: verificar OTP via endpoint general
         const api = await apiService.createApiClient();
@@ -210,7 +209,6 @@ const VerificationScreen = ({route, navigation}) => {
         }
       }
     } catch (err) {
-      console.log('[VerificationScreen] handleVerify error:', err.message, err.response?.data);
       const errorMessage = err.response?.data?.error || err.message || 'Error al verificar el codigo';
       Alert.alert('Error', errorMessage);
     } finally {

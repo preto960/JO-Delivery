@@ -27,10 +27,6 @@ const ENV = {
   API_TIMEOUT: 15000,
   CONNECTION_TIMEOUT: 10000,
 
-  // ── Credenciales demo ──
-  DEMO_DELIVERY_EMAIL: 'delivery@jodelivery.com',
-  DEMO_DELIVERY_PASSWORD: 'Delivery123',
-
   // ── Google Maps / Places API ──
   GOOGLE_PLACES_API_KEY: 'AIzaSyBJBdrBQpWZeH6Ceh-S5ccRj5-tO4gM6DA',
 };

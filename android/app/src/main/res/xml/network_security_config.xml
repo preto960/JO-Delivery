@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Seguridad: bloquea trafico HTTP en texto plano en TODOS los niveles de API.
+         El token de sesion y ubicaciones viajan en cada request y no deben exponerse por HTTP. -->
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

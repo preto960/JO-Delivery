@@ -17,11 +17,15 @@ export const truncateText = (text, maxLength = 80) => {
 };
 
 /**
- * Valida si una URL es válida (compatible con React Native / Hermes)
+ * Valida si una URL es válida (compatible con React Native / Hermes).
+ * Seguridad: en producción solo se acepta HTTPS — el token viaja en cada
+ * request y un http:// expondría credenciales en texto plano.
+ * En desarrollo se permite http:// para probar backends locales.
  */
 export const isValidUrl = string => {
   if (!string || typeof string !== 'string') return false;
-  const pattern = /^https?:\/\/([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(:\d+)?(\/.*)?$/;
+  const scheme = __DEV__ ? 'https?' : 'https';
+  const pattern = new RegExp(`^${scheme}://([a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}(:\\d+)?(/.*)?$`);
   return pattern.test(string.trim());
 };
 

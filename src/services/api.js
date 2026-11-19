@@ -27,6 +27,11 @@ const getApiConfig = async () => {
 
 const saveApiConfig = async config => {
   try {
+    // Seguridad: nunca persistir una URL http:// en producción
+    // (el token y ubicaciones viajan en cada request y se expondrían en texto plano).
+    if (config?.baseUrl && !__DEV__ && String(config.baseUrl).startsWith('http://')) {
+      return false;
+    }
     await AsyncStorage.setItem(API_CONFIG_KEY, JSON.stringify(config));
     return true;
   } catch {

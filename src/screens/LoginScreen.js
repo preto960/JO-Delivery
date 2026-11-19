@@ -35,9 +35,13 @@ const LoginScreen = ({navigation, route}) => {
       try {
         const saved = await AsyncStorage.getItem('@jodelivery_saved_credentials');
         if (saved) {
-          const { email: savedEmail, password: savedPassword } = JSON.parse(saved);
-          if (savedEmail) setEmail(savedEmail);
-          if (savedPassword) setPassword(savedPassword);
+          const parsed = JSON.parse(saved);
+          if (parsed.email) setEmail(parsed.email);
+          if (parsed.password) {
+            // Migración de seguridad: versiones anteriores guardaban también la
+            // contraseña en texto plano. Se conserva solo el email.
+            await AsyncStorage.setItem('@jodelivery_saved_credentials', JSON.stringify({email: parsed.email}));
+          }
         }
       } catch {}
     };
@@ -57,10 +61,10 @@ const LoginScreen = ({navigation, route}) => {
     }
 
     const result = await login(email.trim().toLowerCase(), password);
-    console.log('[LoginScreen] login result:', JSON.stringify(result));
     if (result.success) {
       try {
-        await AsyncStorage.setItem('@jodelivery_saved_credentials', JSON.stringify({ email, password }));
+        // Seguridad: guardar solo el email para pre-llenar; nunca la contraseña.
+        await AsyncStorage.setItem('@jodelivery_saved_credentials', JSON.stringify({email}));
       } catch {}
     }
     if (!result.success) {

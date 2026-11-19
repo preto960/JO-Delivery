@@ -92,7 +92,10 @@ export const AuthProvider = ({children}) => {
     } catch {}
   }, []);
 
-  // Restaurar sesión al iniciar
+  // Restaurar sesión al iniciar.
+  // Si hay token, se revalida contra /auth/me ANTES de renderizar cualquier UI,
+  // para que roles/permisos editados localmente (device rooteado) no muestren
+  // UI de administración. Sin red se cae back a la sesión local.
   // Ref para fetchProfile estable antes de que se use en restoreSession
   const fetchProfileRef = useRef(null);
 
@@ -100,8 +103,49 @@ export const AuthProvider = ({children}) => {
     const restoreSession = async () => {
       try {
         const stored = await AsyncStorage.getItem(AUTH_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
+        if (!stored) {
+          dispatch({type: ACTIONS.SET_RESTORING, payload: false});
+          return;
+        }
+
+        const parsed = JSON.parse(stored);
+        if (!parsed.token) {
+          dispatch({type: ACTIONS.SET_RESTORING, payload: false});
+          return;
+        }
+
+        apiService.setAuthToken(parsed.token);
+        try {
+          const api = await apiService.createApiClient();
+          const profile = api ? await api.get('/auth/me') : null;
+          dispatch({
+            type: ACTIONS.RESTORE_SESSION,
+            payload: {
+              user: profile || parsed.user,
+              token: parsed.token,
+              refreshToken: parsed.refreshToken,
+            },
+          });
+          if (profile) {
+            await saveSession({
+              user: profile,
+              token: parsed.token,
+              refreshToken: parsed.refreshToken,
+            });
+          }
+          // Refrescar perfil del servidor para obtener el estado mas reciente (ej: isOnline)
+          setTimeout(() => {
+            fetchProfileRef.current?.();
+          }, 100);
+        } catch (err) {
+          if (err.response?.status === 401) {
+            // Token inválido o revocado: cerrar sesión
+            await clearSession();
+            apiService.setAuthToken(null);
+            dispatch({type: ACTIONS.SET_RESTORING, payload: false});
+            return;
+          }
+          // Sin red o servidor caído: restaurar la sesión local para no bloquear la app
           dispatch({
             type: ACTIONS.RESTORE_SESSION,
             payload: {
@@ -111,21 +155,16 @@ export const AuthProvider = ({children}) => {
             },
           });
           // Refrescar perfil del servidor para obtener el estado mas reciente (ej: isOnline)
-          if (parsed.token) {
-            // Se ejecuta despues del dispatch para que el token este disponible
-            setTimeout(() => {
-              fetchProfileRef.current?.();
-            }, 100);
-          }
-        } else {
-          dispatch({type: ACTIONS.SET_RESTORING, payload: false});
+          setTimeout(() => {
+            fetchProfileRef.current?.();
+          }, 100);
         }
       } catch {
         dispatch({type: ACTIONS.SET_RESTORING, payload: false});
       }
     };
     restoreSession();
-  }, []);
+  }, [saveSession, clearSession]);
 
   // Login
   const login = useCallback(async (email, password) => {
@@ -139,17 +178,18 @@ export const AuthProvider = ({children}) => {
       }
 
       const response = await api.post('/auth/login', {email, password, role: 'delivery'});
-      console.log('[AuthContext] login response:', JSON.stringify(response));
 
       // Verificar si se requiere 2FA (OTP)
       if (response.requiresOtp) {
-        console.log('[AuthContext] 2FA requerido, email:', response.email);
         dispatch({type: ACTIONS.SET_LOADING, payload: false});
         return {
           success: false,
           requiresOtp: true,
           email: response.email,
-          otpCode: response.code,
+          // Seguridad: nunca confiar en un OTP entregado en la misma respuesta del API.
+          // El código solo se usa para auto-completar en desarrollo; en producción el
+          // usuario debe ingresarlo desde su email/authenticator.
+          otpCode: __DEV__ ? response.code : undefined,
           twoFactorType: response.twoFactorType || 'email',
         };
       }
@@ -170,7 +210,6 @@ export const AuthProvider = ({children}) => {
 
       return {success: true};
     } catch (err) {
-      console.log('[AuthContext] login error:', err.message, err.response?.data);
       let message = 'Error al iniciar sesión';
       if (err.response?.data) {
         const data = err.response.data;
@@ -194,14 +233,12 @@ export const AuthProvider = ({children}) => {
         throw new Error('Configura la URL del servidor en Ajustes');
       }
 
-      console.log('[AuthContext] loginWithOtp - llamando /auth/login-verify con email:', email, 'code:', otpCode);
       const response = await api.post('/auth/login-verify', {
         email,
         code: otpCode,
         type: verifyType,
         role: 'delivery',
       });
-      console.log('[AuthContext] loginWithOtp - response:', JSON.stringify(response));
       const {user, token, refreshToken} = response;
 
       await saveSession({user, token, refreshToken});
@@ -218,7 +255,6 @@ export const AuthProvider = ({children}) => {
 
       return {success: true};
     } catch (err) {
-      console.log('[AuthContext] loginWithOtp - error:', err.message, err.response?.data);
       let message = 'Error al verificar el código';
       if (err.response?.data) {
         const data = err.response.data;

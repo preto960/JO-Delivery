@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- SOLO builds debug: permite HTTP para Metro/bundler y backends locales.
+         En release se usa la config de src/main (cleartext bloqueado). -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
