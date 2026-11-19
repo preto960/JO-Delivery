@@ -1281,7 +1281,7 @@ const AdminProductsScreen = () => {
             style={styles.searchInput}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Buscar productos..."
+            placeholder="Buscar"
             placeholderTextColor={theme.colors.textLight}
             returnKeyType="search"
             clearButtonMode="while-editing"

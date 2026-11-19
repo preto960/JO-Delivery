@@ -8,7 +8,17 @@ const colors = {
   accent: '#B0B8C1',
   accentLight: '#C4CCD4',
   success: '#2ECC71',
+  successLight: '#E8F8F0',
   warning: '#F39C12',
+  warningLight: '#FFF8E8',
+  danger: '#E74C3C',
+  dangerLight: '#FDEDEC',
+  info: '#5B8DEF',
+  infoLight: '#EBF1FD',
+  teal: '#1ABC9C',
+  tealLight: '#E8FAF6',
+  purple: '#9B59B6',
+  purpleLight: '#F3EBF8',
   text: '#2C3E50',
   textSecondary: '#7F8C8D',
   textLight: '#BDC3C7',
@@ -19,6 +29,17 @@ const colors = {
   shadow: '#0000000D',
   inputBg: '#F0F2F5',
   overlay: 'rgba(0, 0, 0, 0.5)',
+};
+
+// Paleta única de estados de pedido — las pantallas NO definen la suya.
+// Único punto de verdad para MyOrders, AdminOrders, AdminDashboard y Delivery.
+const STATUS_COLORS = {
+  pending:   {bg: colors.warningLight, text: colors.warning,    main: colors.warning},
+  confirmed: {bg: colors.infoLight,    text: colors.info,       main: colors.info},
+  preparing: {bg: colors.purpleLight,  text: colors.purple,     main: colors.purple},
+  shipped:   {bg: colors.tealLight,    text: colors.teal,       main: colors.teal},
+  delivered: {bg: colors.successLight, text: colors.success,    main: colors.success},
+  cancelled: {bg: colors.dangerLight,  text: colors.danger,     main: colors.danger},
 };
 
 const spacing = {
@@ -75,6 +96,7 @@ const shadows = {
 
 const theme = {
   colors,
+  statusColors: STATUS_COLORS,
   spacing,
   borderRadius,
   fontSize,

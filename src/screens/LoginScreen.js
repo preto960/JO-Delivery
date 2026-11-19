@@ -224,7 +224,7 @@ const createStyles = (primary) => StyleSheet.create({
   },
   logoText: {
     fontSize: theme.fontSize.hero,
-    fontWeight: '800',
+    fontWeight: '600',
     color: theme.colors.primary,
   },
   subtitle: {
@@ -235,7 +235,7 @@ const createStyles = (primary) => StyleSheet.create({
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FDE8EC',
+    backgroundColor: theme.colors.dangerLight,
     borderRadius: theme.borderRadius.sm,
     padding: theme.spacing.sm + 2,
     marginBottom: theme.spacing.lg,

@@ -390,7 +390,7 @@ const ProfileScreen = () => {
     const text = totpBackupCodes.join('\n');
     try {
       await Share.share({
-        message: `Codigos de respaldo 2FA:\n\n${text}`,
+        message: `Códigos de respaldo 2FA:\n\n${text}`,
       });
     } catch {
       // User cancelled or error — no action needed
@@ -811,7 +811,7 @@ const ProfileScreen = () => {
                 </Text>
                 <Text style={styles.onlineStatusDesc}>
                   {isOnline
-                    ? 'Estas recibiendo notificaciones de nuevos pedidos'
+                    ? 'Estás recibiendo notificaciones de nuevos pedidos'
                     : 'No recibirás notificaciones de nuevos pedidos'}
                 </Text>
               </View>
@@ -820,8 +820,8 @@ const ProfileScreen = () => {
               value={isOnline}
               onValueChange={handleToggleOnline}
               disabled={onlineLoading}
-              trackColor={{false: '#D1D5DB', true: '#4CAF50'}}
-              thumbColor={onlineLoading ? '#F5F5F5' : theme.colors.white}
+              trackColor={{false: theme.colors.border, true: theme.colors.success}}
+              thumbColor={onlineLoading ? theme.colors.inputBg : theme.colors.white}
               ios_backgroundColor="#D1D5DB"
             />
           </View>
@@ -959,7 +959,7 @@ const ProfileScreen = () => {
                         />
                       </View>
                       <View style={styles.securityTextWrap}>
-                        <Text style={styles.securityLabel}>Autenticacion en 2 pasos</Text>
+                        <Text style={styles.securityLabel}>Autenticación en 2 pasos</Text>
                         <Text style={styles.securityDescription}>
                           {twoFactorEnabled
                             ? `Activada (${user?.twoFactorType === 'totp' ? 'App Authenticator' : 'Correo electronico'})`
@@ -972,19 +972,19 @@ const ProfileScreen = () => {
                       style={[
                         styles.twoFaActionBtn,
                         twoFactorEnabled
-                          ? { backgroundColor: '#FDE8EC', borderColor: '#FF6B6B' }
-                          : { backgroundColor: '#E8F5E9', borderColor: '#4CAF50' },
+                          ? { backgroundColor: theme.colors.dangerLight, borderColor: theme.colors.danger }
+                          : { backgroundColor: theme.colors.successLight, borderColor: theme.colors.success },
                       ]}
                       activeOpacity={0.7}
                     >
                       <Icon
                         name={twoFactorEnabled ? 'close-circle-outline' : 'checkmark-circle-outline'}
                         size={18}
-                        color={twoFactorEnabled ? '#FF6B6B' : '#4CAF50'}
+                        color={twoFactorEnabled ? theme.colors.danger : theme.colors.success}
                       />
                       <Text style={[
                         styles.twoFaActionBtnText,
-                        { color: twoFactorEnabled ? '#FF6B6B' : '#4CAF50' },
+                        { color: twoFactorEnabled ? theme.colors.danger : theme.colors.success },
                       ]}>
                         {twoFactorEnabled ? 'Desactivar' : 'Activar'}
                       </Text>
@@ -1009,7 +1009,7 @@ const ProfileScreen = () => {
                         />
                       </View>
                       <View style={styles.securityTextWrap}>
-                        <Text style={styles.securityLabel}>Codigos de respaldo</Text>
+                        <Text style={styles.securityLabel}>Códigos de respaldo</Text>
                         <Text style={styles.securityDescription}>
                           Genera nuevos codigos de un solo uso en caso de perder acceso a tu app authenticator.
                         </Text>
@@ -1049,7 +1049,7 @@ const ProfileScreen = () => {
                   style={styles.methodOption}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.methodOptionIcon, { backgroundColor: '#E3F2FD' }]}>
+                  <View style={[styles.methodOptionIcon, { backgroundColor: theme.colors.infoLight }]}>
                     <Icon name="mail-outline" size={22} color="#1976D2" />
                   </View>
                   <View style={styles.methodOptionInfo}>
@@ -1069,8 +1069,8 @@ const ProfileScreen = () => {
                   style={styles.methodOption}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.methodOptionIcon, { backgroundColor: '#E8F5E9' }]}>
-                    <Icon name="phone-portrait-outline" size={22} color="#4CAF50" />
+                  <View style={[styles.methodOptionIcon, { backgroundColor: theme.colors.successLight }]}>
+                    <Icon name="phone-portrait-outline" size={22} color={theme.colors.success} />
                   </View>
                   <View style={styles.methodOptionInfo}>
                     <Text style={styles.methodOptionLabel}>Por App Authenticator</Text>
@@ -1241,7 +1241,7 @@ const ProfileScreen = () => {
               <View style={styles.securityCard}>
                 <View style={styles.twoFaConfirmHeader}>
                   <Icon name="key-outline" size={40} color={theme.colors.success} />
-                  <Text style={styles.twoFaConfirmTitle}>Codigos de respaldo</Text>
+                  <Text style={styles.twoFaConfirmTitle}>Códigos de respaldo</Text>
                   <Text style={styles.twoFaConfirmDesc}>
                     Guarda estos codigos en un lugar seguro. Cada codigo solo puede usarse una vez para iniciar sesion si pierdes acceso a tu app authenticator.
                   </Text>
@@ -1310,7 +1310,7 @@ const ProfileScreen = () => {
                   <Icon
                     name={twoFaAction === 'enable' ? 'shield-checkmark-outline' : 'shield-outline'}
                     size={40}
-                    color={twoFaAction === 'enable' ? theme.colors.success : '#FF6B6B'}
+                    color={twoFaAction === 'enable' ? theme.colors.success : theme.colors.danger}
                   />
                   <Text style={styles.twoFaConfirmTitle}>
                     {twoFaAction === 'enable' ? 'Activar' : 'Desactivar'} autenticacion en 2 pasos
@@ -1343,7 +1343,7 @@ const ProfileScreen = () => {
                       styles.twoFaSendBtn,
                       twoFaAction === 'enable'
                         ? { backgroundColor: theme.colors.success }
-                        : { backgroundColor: '#FF6B6B' },
+                        : { backgroundColor: theme.colors.danger },
                       twoFaLoading && styles.buttonDisabled,
                     ]}
                     disabled={twoFaLoading}
@@ -1414,7 +1414,7 @@ const ProfileScreen = () => {
                       styles.twoFaVerifyBtn,
                       twoFaAction === 'enable'
                         ? { backgroundColor: theme.colors.success }
-                        : { backgroundColor: '#FF6B6B' },
+                        : { backgroundColor: theme.colors.danger },
                       (twoFaLoading || twoFaOtp.join('').length !== OTP_LENGTH) && styles.buttonDisabled,
                     ]}
                     disabled={twoFaLoading || twoFaOtp.join('').length !== OTP_LENGTH}
@@ -2107,7 +2107,7 @@ const createStyles = (primary) => StyleSheet.create({
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FDE8EC',
+    backgroundColor: theme.colors.dangerLight,
     borderRadius: theme.borderRadius.sm,
     padding: theme.spacing.sm + 2,
     marginVertical: theme.spacing.md,
@@ -2480,7 +2480,6 @@ const createStyles = (primary) => StyleSheet.create({
     fontWeight: '700',
     color: primary,
     marginBottom: theme.spacing.xs,
-    textTransform: 'uppercase',
   },
   permList: {
     flexDirection: 'row',
@@ -2643,12 +2642,12 @@ const createStyles = (primary) => StyleSheet.create({
     marginTop: theme.spacing.md,
   },
   onlineStatusCardOn: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.successLight,
     borderWidth: 1,
-    borderColor: '#4CAF5033',
+    borderColor: theme.colors.successLight,
   },
   onlineStatusCardOff: {
-    backgroundColor: '#FFF3E0',
+    backgroundColor: theme.colors.warningLight,
     borderWidth: 1,
     borderColor: '#FF980033',
   },
@@ -2664,10 +2663,10 @@ const createStyles = (primary) => StyleSheet.create({
     marginRight: theme.spacing.sm,
   },
   onlineStatusDotOn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.success,
   },
   onlineStatusDotOff: {
-    backgroundColor: '#FF9800',
+    backgroundColor: theme.colors.warning,
   },
   onlineStatusTextWrap: {
     flex: 1,
@@ -2677,10 +2676,10 @@ const createStyles = (primary) => StyleSheet.create({
     fontWeight: '600',
   },
   onlineStatusLabelOn: {
-    color: '#2E7D32',
+    color: theme.colors.success,
   },
   onlineStatusLabelOff: {
-    color: '#E65100',
+    color: theme.colors.warning,
   },
   onlineStatusDesc: {
     fontSize: theme.fontSize.xs,

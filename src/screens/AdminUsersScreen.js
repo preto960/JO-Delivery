@@ -2183,7 +2183,7 @@ const createStyles = (primary) => StyleSheet.create({
     color: theme.colors.white,
   },
   inactiveTag: {
-    backgroundColor: '#FDE8EC',
+    backgroundColor: theme.colors.dangerLight,
     borderRadius: theme.borderRadius.sm,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -2313,7 +2313,6 @@ const createStyles = (primary) => StyleSheet.create({
   detailEmptyText: {
     fontSize: theme.fontSize.sm,
     color: theme.colors.textLight,
-    fontStyle: 'italic',
   },
 
   // Info card
@@ -2388,7 +2387,6 @@ const createStyles = (primary) => StyleSheet.create({
     fontSize: theme.fontSize.xs,
     fontWeight: '700',
     color: primary,
-    textTransform: 'uppercase',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     backgroundColor: 'rgba(233, 69, 96, 0.08)',
@@ -2624,7 +2622,6 @@ const createStyles = (primary) => StyleSheet.create({
   editEmptyRoles: {
     fontSize: theme.fontSize.sm,
     color: theme.colors.textLight,
-    fontStyle: 'italic',
     marginTop: theme.spacing.sm,
   },
 
@@ -2640,7 +2637,6 @@ const createStyles = (primary) => StyleSheet.create({
     fontSize: theme.fontSize.xs,
     fontWeight: '700',
     color: primary,
-    textTransform: 'uppercase',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.inputBg,
@@ -2721,7 +2717,7 @@ const createStyles = (primary) => StyleSheet.create({
     elevation: 6,
     shadowColor: primary,
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
   },
 

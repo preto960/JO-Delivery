@@ -158,7 +158,7 @@ const RegisterScreen = ({navigation}) => {
             {password.length > 0 && (
               <View style={styles.passwordRulesContainer}>
                 <Text style={styles.passwordRulesTitle}>
-                  {allRulesMet ? 'Contraseña valida' : 'Requisitos de contraseña:'}
+                  {allRulesMet ? 'Contraseña válida' : 'Requisitos de contraseña:'}
                 </Text>
                 {passwordRules.map((rule, i) => (
                   <View key={i} style={styles.passwordRuleRow}>
@@ -178,7 +178,7 @@ const RegisterScreen = ({navigation}) => {
               styles.inputContainer,
               confirmPassword.length > 0 && (passwordsMatch
                 ? {borderColor: theme.colors.success}
-                : {borderColor: '#EF4444'}),
+                : {borderColor: theme.colors.danger}),
             ]}>
               <Icon name="lock-closed-outline" size={20} color={theme.colors.textSecondary} />
               <TextInput
@@ -194,7 +194,7 @@ const RegisterScreen = ({navigation}) => {
                 <Icon
                   name={passwordsMatch ? 'checkmark-circle' : 'close-circle'}
                   size={20}
-                  color={passwordsMatch ? theme.colors.success : '#EF4444'}
+                  color={passwordsMatch ? theme.colors.success : theme.colors.danger}
                 />
               )}
             </View>
@@ -256,7 +256,7 @@ const createStyles = (primary) => StyleSheet.create({
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FDE8EC',
+    backgroundColor: theme.colors.dangerLight,
     borderRadius: theme.borderRadius.sm,
     padding: theme.spacing.sm + 2,
     marginBottom: theme.spacing.lg,

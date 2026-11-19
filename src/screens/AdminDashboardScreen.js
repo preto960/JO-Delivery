@@ -56,10 +56,10 @@ const AdminDashboardScreen = () => {
 
   const statusColors = {
     pending: theme.colors.warning,
-    confirmed: '#3498DB',
-    preparing: '#9B59B6',
-    shipped: '#2ECC71',
-    delivered: '#27AE60',
+    confirmed: theme.colors.info,
+    preparing: theme.colors.purple,
+    shipped: theme.colors.success,
+    delivered: theme.colors.success,
     cancelled: primary,
   };
 
@@ -139,12 +139,12 @@ const AdminDashboardScreen = () => {
             <Text style={styles.statLabel}>Ingresos</Text>
           </View>
           <View style={styles.statCard}>
-            <Icon name="today-outline" size={24} color="#3498DB" />
+            <Icon name="today-outline" size={24} color={theme.colors.info} />
             <Text style={styles.statValue}>{stats?.todayOrders || 0}</Text>
             <Text style={styles.statLabel}>Hoy</Text>
           </View>
           <View style={styles.statCard}>
-            <Icon name="people-outline" size={24} color="#9B59B6" />
+            <Icon name="people-outline" size={24} color={theme.colors.purple} />
             <Text style={styles.statValue}>{stats?.totalCustomers || 0}</Text>
             <Text style={styles.statLabel}>Clientes</Text>
           </View>
@@ -157,7 +157,7 @@ const AdminDashboardScreen = () => {
             onPress={() => navigation.navigate('AdminProducts')}
             style={styles.actionCard}
             activeOpacity={0.8}>
-            <View style={[styles.actionIcon, {backgroundColor: '#FDE8EC'}]}>
+            <View style={[styles.actionIcon, {backgroundColor: theme.colors.dangerLight}]}>
               <Icon name="pricetag-outline" size={24} color={primary} />
             </View>
             <Text style={styles.actionTitle}>Productos</Text>
@@ -168,7 +168,7 @@ const AdminDashboardScreen = () => {
             onPress={() => navigation.navigate('AdminCategories')}
             style={styles.actionCard}
             activeOpacity={0.8}>
-            <View style={[styles.actionIcon, {backgroundColor: '#E8F8F0'}]}>
+            <View style={[styles.actionIcon, {backgroundColor: theme.colors.successLight}]}>
               <Icon name="folder-outline" size={24} color={theme.colors.success} />
             </View>
             <Text style={styles.actionTitle}>Categorías</Text>
@@ -179,7 +179,7 @@ const AdminDashboardScreen = () => {
             onPress={() => navigation.navigate('AdminStores')}
             style={styles.actionCard}
             activeOpacity={0.8}>
-            <View style={[styles.actionIcon, {backgroundColor: '#FFF3E0'}]}>
+            <View style={[styles.actionIcon, {backgroundColor: theme.colors.warningLight}]}>
               <Icon name="storefront-outline" size={24} color="#E67E22" />
             </View>
             <Text style={styles.actionTitle}>Tiendas</Text>
@@ -191,7 +191,7 @@ const AdminDashboardScreen = () => {
             style={styles.actionCard}
             activeOpacity={0.8}>
             <View style={[styles.actionIcon, {backgroundColor: '#EBF0FA'}]}>
-              <Icon name="receipt-outline" size={24} color="#3498DB" />
+              <Icon name="receipt-outline" size={24} color={theme.colors.info} />
             </View>
             <Text style={styles.actionTitle}>Pedidos</Text>
             <Text style={styles.actionSub}>{stats?.pendingOrders || 0} pendientes</Text>

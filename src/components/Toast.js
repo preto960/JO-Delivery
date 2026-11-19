@@ -93,7 +93,7 @@ const Toast = ({visible, message, type = 'success', duration = 3000, onHide}) =>
       case 'warning':
         return theme.colors.warning;
       case 'info':
-        return '#3498DB';
+        return theme.colors.info;
       default:
         return theme.colors.success;
     }

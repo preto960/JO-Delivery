@@ -277,11 +277,11 @@ const AdminBatchesScreen = () => {
           }
           activeOpacity={0.7}>
           {/* Left: icon */}
-          <View style={[styles.batchIcon, {backgroundColor: discount > 0 ? '#E8FBF5' : '#F0F2F5'}]}>
+          <View style={[styles.batchIcon, {backgroundColor: discount > 0 ? '#E8FBF5' : theme.colors.inputBg}]}>
             <Icon
               name="layers-outline"
               size={22}
-              color={discount > 0 ? '#00B894' : theme.colors.textSecondary}
+              color={discount > 0 ? theme.colors.success : theme.colors.textSecondary}
             />
           </View>
 
@@ -296,13 +296,13 @@ const AdminBatchesScreen = () => {
               </Text>
             ) : null}
             <View style={styles.cardBadges}>
-              <View style={[styles.badge, {backgroundColor: discount > 0 ? '#E8FBF5' : '#F0F2F5'}]}>
-                <Text style={[styles.badgeText, {color: discount > 0 ? '#00B894' : theme.colors.textSecondary}]}>
+              <View style={[styles.badge, {backgroundColor: discount > 0 ? '#E8FBF5' : theme.colors.inputBg}]}>
+                <Text style={[styles.badgeText, {color: discount > 0 ? theme.colors.success : theme.colors.textSecondary}]}>
                   {discount > 0 ? `${discount}% dto.` : '0% dto.'}
                 </Text>
               </View>
-              <View style={[styles.badge, {backgroundColor: '#E8F1FF'}]}>
-                <Text style={[styles.badgeText, {color: '#54A0FF'}]}>
+              <View style={[styles.badge, {backgroundColor: theme.colors.infoLight}]}>
+                <Text style={[styles.badgeText, {color: theme.colors.info}]}>
                   {itemCount} producto{itemCount !== 1 ? 's' : ''}
                 </Text>
               </View>
@@ -316,7 +316,7 @@ const AdminBatchesScreen = () => {
                 style={styles.actionBtn}
                 onPress={() => openEditModal(item)}
                 activeOpacity={0.7}>
-                <Icon name="create-outline" size={20} color="#3498DB" />
+                <Icon name="create-outline" size={20} color={theme.colors.info} />
               </TouchableOpacity>
             )}
             {isActive && hasPermission('batches.delete') && (
@@ -324,7 +324,7 @@ const AdminBatchesScreen = () => {
                 style={styles.actionBtn}
                 onPress={() => handleDelete(item)}
                 activeOpacity={0.7}>
-                <Icon name="trash-outline" size={20} color="#FF6B6B" />
+                <Icon name="trash-outline" size={20} color={theme.colors.danger} />
               </TouchableOpacity>
             )}
             <Icon
@@ -354,7 +354,7 @@ const AdminBatchesScreen = () => {
                     <Text style={styles.expandedProductPrice}>
                       {formatPrice(prod.price)}
                       {(prod.discountPercent || prod.discount_percent) > 0 && (
-                        <Text style={{color: '#00B894'}}>
+                        <Text style={{color: theme.colors.success}}>
                           {' '}
                           -{prod.discountPercent || prod.discount_percent}%
                         </Text>
@@ -598,7 +598,7 @@ const AdminBatchesScreen = () => {
                       <TouchableOpacity
                         onPress={() => toggleProduct(p.id)}
                         hitSlop={{top: 4, bottom: 4, left: 4, right: 4}}>
-                        <Icon name="close" size={14} color="#FF6B6B" />
+                        <Icon name="close" size={14} color={theme.colors.danger} />
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -802,14 +802,14 @@ const createStyles = primary =>
       width: 36,
       height: 36,
       borderRadius: theme.borderRadius.md,
-      backgroundColor: '#F0F2F5',
+      backgroundColor: theme.colors.inputBg,
       alignItems: 'center',
       justifyContent: 'center',
     },
 
     // Expanded
     expandedContainer: {
-      backgroundColor: '#F8F9FA',
+      backgroundColor: theme.colors.background,
       marginHorizontal: theme.spacing.lg,
       marginBottom: theme.spacing.sm,
       padding: theme.spacing.md,
@@ -891,7 +891,7 @@ const createStyles = primary =>
       elevation: 6,
       shadowColor: primary,
       shadowOffset: {width: 0, height: 4},
-      shadowOpacity: 0.35,
+      shadowOpacity: 0.15,
       shadowRadius: 8,
     },
 
@@ -953,7 +953,7 @@ const createStyles = primary =>
       borderWidth: 1.5,
       borderColor: theme.colors.border,
       borderRadius: theme.borderRadius.md,
-      backgroundColor: theme.colors.inputBg || '#F0F2F5',
+      backgroundColor: theme.colors.inputBg || theme.colors.inputBg,
       paddingHorizontal: theme.spacing.md,
       paddingVertical: theme.spacing.sm,
       fontSize: theme.fontSize.md,
@@ -972,7 +972,7 @@ const createStyles = primary =>
       borderWidth: 1.5,
       borderColor: theme.colors.border,
       borderRadius: theme.borderRadius.md,
-      backgroundColor: theme.colors.inputBg || '#F0F2F5',
+      backgroundColor: theme.colors.inputBg || theme.colors.inputBg,
       paddingHorizontal: theme.spacing.md,
       height: 48,
     },
@@ -985,7 +985,7 @@ const createStyles = primary =>
     },
     productsError: {
       fontSize: theme.fontSize.sm,
-      color: '#FF6B6B',
+      color: theme.colors.danger,
       marginTop: -4,
       marginBottom: theme.spacing.sm,
     },
@@ -1006,12 +1006,12 @@ const createStyles = primary =>
     selectedSummaryTitle: {
       fontSize: theme.fontSize.sm,
       fontWeight: '700',
-      color: '#00B894',
+      color: theme.colors.success,
     },
     clearBtn: {
       fontSize: theme.fontSize.xs,
       fontWeight: '600',
-      color: '#FF6B6B',
+      color: theme.colors.danger,
     },
     selectedChipsContainer: {
       flexDirection: 'row',
@@ -1026,7 +1026,7 @@ const createStyles = primary =>
       paddingVertical: 6,
       borderRadius: 8,
       borderWidth: 1,
-      borderColor: '#00B894',
+      borderColor: theme.colors.success,
       gap: 4,
     },
     chipText: {
@@ -1052,7 +1052,7 @@ const createStyles = primary =>
       borderWidth: 1.5,
       borderColor: theme.colors.border,
       borderRadius: theme.borderRadius.md,
-      backgroundColor: theme.colors.inputBg || '#F0F2F5',
+      backgroundColor: theme.colors.inputBg || theme.colors.inputBg,
       paddingHorizontal: theme.spacing.md,
       height: 42,
       marginBottom: theme.spacing.sm,

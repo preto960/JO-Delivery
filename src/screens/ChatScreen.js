@@ -275,7 +275,7 @@ export default function ChatScreen({route, navigation}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: theme.colors.inputBg,
   },
   keyboardAvoid: {
     flex: 1,
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F0F2F5',
+    backgroundColor: theme.colors.inputBg,
   },
   flatListContent: {
     paddingHorizontal: 16,

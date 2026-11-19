@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   },
   loaderText: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#636E72',
     letterSpacing: -0.5,
   },

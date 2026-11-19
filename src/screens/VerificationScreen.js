@@ -175,7 +175,7 @@ const VerificationScreen = ({route, navigation}) => {
   const handleVerify = async () => {
     const code = otp.join('');
     if (code.length !== OTP_LENGTH) {
-      Alert.alert('Codigo incompleto', 'Ingresa los 6 digitos del codigo de verificacion.');
+      Alert.alert('Código incompleto', 'Ingresa los 6 dígitos del código de verificación.');
       return;
     }
 
@@ -201,7 +201,7 @@ const VerificationScreen = ({route, navigation}) => {
           type: type || 'login',
         });
 
-        // Verificacion exitosa
+        // Verificación exitosa
         if (onComplete) {
           onComplete();
         } else if (navigation) {
@@ -283,7 +283,7 @@ const VerificationScreen = ({route, navigation}) => {
           </View>
 
           <Text style={styles.title}>
-            {twoFactorType === 'totp' ? 'Autenticacion con App' : 'Verificacion en 2 pasos'}
+            {twoFactorType === 'totp' ? 'Autenticación con App' : 'Verificación en 2 pasos'}
           </Text>
           <Text style={styles.subtitle}>
             {twoFactorType === 'totp'

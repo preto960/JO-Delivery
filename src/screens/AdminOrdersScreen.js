@@ -34,9 +34,9 @@ const STATUS_FLOW = ['pending', 'confirmed', 'preparing', 'shipped', 'delivered'
 
 const STATUS_CONFIG = {
   pending: { label: 'Pendiente', color: theme.colors.warning, icon: 'time-outline' },
-  confirmed: { label: 'Confirmado', color: '#3498DB', icon: 'checkmark-circle-outline' },
-  preparing: { label: 'Preparando', color: '#9B59B6', icon: 'restaurant-outline' },
-  shipped: { label: 'Enviado', color: '#1ABC9C', icon: 'bicycle-outline' },
+  confirmed: { label: 'Confirmado', color: theme.colors.info, icon: 'checkmark-circle-outline' },
+  preparing: { label: 'Preparando', color: theme.colors.purple, icon: 'restaurant-outline' },
+  shipped: { label: 'Enviado', color: theme.colors.teal, icon: 'bicycle-outline' },
   delivered: { label: 'Entregado', color: theme.colors.success, icon: 'checkmark-done-outline' },
   cancelled: { label: 'Cancelado', color: theme.colors.accent, icon: 'close-circle-outline' },
 };

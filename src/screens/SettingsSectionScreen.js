@@ -167,9 +167,9 @@ const AppearanceSection = ({primary, styles, config, updateConfig, setModal}) =>
       </View>
 
       <Text style={[styles.appearanceLabel, {marginTop: 4}]}>Vista previa</Text>
-      <View style={[styles.previewCard, {backgroundColor: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`}]}>
+      <View style={[styles.previewCard, {backgroundColor: primaryColor}]}>
         <Text style={styles.previewName}>{shopName || 'JO-Shop'}</Text>
-        <Text style={styles.previewSubtext}>Tu tienda de confianza</Text>
+        <Text style={styles.previewSubtext}>Ajustes de la tienda</Text>
       </View>
       <View style={styles.previewColors}>
         <View style={[styles.previewSwatch, {backgroundColor: primaryColor}]} />
@@ -197,7 +197,7 @@ const AppearanceSection = ({primary, styles, config, updateConfig, setModal}) =>
           {config.shop_logo_url ? (
             <TouchableOpacity onPress={handleDeleteLogo} style={styles.logoBtn} activeOpacity={0.7}>
               <Icon name="trash-outline" size={16} color="#EF4444" />
-              <Text style={[styles.logoBtnText, {color: '#EF4444'}]}>Eliminar</Text>
+              <Text style={[styles.logoBtnText, {color: theme.colors.danger}]}>Eliminar</Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -414,7 +414,7 @@ const AboutSection = ({primary, styles, config}) => (
 const SECTION_META = {
   appearance: {title: 'Apariencia', icon: 'color-palette-outline', color: '#FF6B35'},
   server: {title: 'Servidor Backend', icon: 'server-outline', color: '#4FACFE'},
-  about: {title: 'Acerca de', icon: 'information-circle-outline', color: '#56AB2F'},
+  about: {title: 'Acerca de', icon: 'information-circle-outline', color: theme.colors.success},
 };
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
@@ -575,7 +575,7 @@ const createStyles = primary => StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
-  modeDotSingle: {backgroundColor: '#3498DB'},
+  modeDotSingle: {backgroundColor: theme.colors.info},
   modeDotMulti: {backgroundColor: primary},
   modeText: {
     fontSize: theme.fontSize.sm,
@@ -654,7 +654,7 @@ const createStyles = primary => StyleSheet.create({
   },
   previewName: {
     color: 'white',
-    fontWeight: '800',
+    fontWeight: '600',
     fontSize: 20,
   },
   previewSubtext: {
@@ -825,11 +825,11 @@ const createStyles = primary => StyleSheet.create({
   },
   // ─── Server ──────────────────────────────────────────────────
   envCard: {
-    backgroundColor: '#FFF8F0',
+    backgroundColor: theme.colors.warningLight,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.md,
     borderWidth: 1,
-    borderColor: '#FFD6A0',
+    borderColor: theme.colors.warningLight,
     marginBottom: theme.spacing.sm,
   },
   envCardHeader: {
@@ -841,7 +841,7 @@ const createStyles = primary => StyleSheet.create({
   envCardTitle: {
     fontSize: theme.fontSize.sm,
     fontWeight: '600',
-    color: '#CC7A00',
+    color: theme.colors.warning,
   },
   envUrlText: {
     fontSize: theme.fontSize.md,
@@ -883,15 +883,15 @@ const createStyles = primary => StyleSheet.create({
     borderRadius: theme.borderRadius.sm,
     marginBottom: theme.spacing.md,
   },
-  statusSuccess: {backgroundColor: '#E8F8F0'},
-  statusError: {backgroundColor: '#FDE8EC'},
+  statusSuccess: {backgroundColor: theme.colors.successLight},
+  statusError: {backgroundColor: theme.colors.dangerLight},
   statusText: {
     fontSize: theme.fontSize.sm,
     fontWeight: '500',
     marginLeft: theme.spacing.sm,
     flex: 1,
   },
-  statusTextSuccess: {color: '#27AE60'},
+  statusTextSuccess: {color: theme.colors.success},
   statusTextError: {color: primary},
   actions: {
     flexDirection: 'row',
@@ -927,7 +927,7 @@ const createStyles = primary => StyleSheet.create({
     borderColor: primary,
     borderRadius: theme.borderRadius.md,
     gap: theme.spacing.xs,
-    backgroundColor: '#FDE8EC',
+    backgroundColor: theme.colors.dangerLight,
   },
   resetButtonText: {
     fontSize: theme.fontSize.sm,

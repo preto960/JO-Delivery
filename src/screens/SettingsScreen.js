@@ -67,7 +67,7 @@ const SettingsScreen = () => {
             <Icon name="arrow-back" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Configuracion</Text>
+            <Text style={styles.headerTitle}>Configuración</Text>
           </View>
           <View style={{width: 40}} />
         </View>
@@ -111,7 +111,7 @@ const SettingsScreen = () => {
                   activeOpacity={0.7}
                   onPress={() => handlePress(card)}>
                   <View style={[styles.iconContainer, {backgroundColor: card.showToAll ? '#56AB2F15' : primary + '15'}]}>
-                    <Icon name={card.icon} size={24} color={card.showToAll ? '#56AB2F' : primary} />
+                    <Icon name={card.icon} size={24} color={card.showToAll ? theme.colors.success : primary} />
                   </View>
                   <View style={styles.cardInfo}>
                     <Text style={styles.cardTitle}>{card.title}</Text>
@@ -172,7 +172,6 @@ const createStyles = primary => StyleSheet.create({
     fontSize: theme.fontSize.sm,
     fontWeight: '600',
     color: theme.colors.textSecondary,
-    textTransform: 'uppercase',
     letterSpacing: 0.5,
     paddingHorizontal: theme.spacing.lg,
     marginBottom: theme.spacing.sm,

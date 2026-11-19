@@ -46,12 +46,12 @@ const STATUS_CONFIG = {
   },
   confirmed: {
     label: 'Disponible',
-    color: '#3498DB',
+    color: theme.colors.info,
     icon: 'checkmark-circle-outline',
   },
   shipped: {
     label: 'En camino',
-    color: '#1ABC9C',
+    color: theme.colors.teal,
     icon: 'bicycle-outline',
   },
   delivered: {
@@ -621,31 +621,13 @@ const DeliveryOrdersScreen = () => {
     setHighlightOrderId(targetId);
   }, [orders]);
 
-  // Animacion de pulso para la orden resaltada
+  // Resaltar la orden indicada por la notificación (borde estático, sin pulso)
   useEffect(() => {
     if (!highlightOrderId) return;
 
-    const animation = Animated.sequence([
-      Animated.timing(pulseAnim, {
-        toValue: 1.03,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(pulseAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]);
-
-    Animated.loop(animation, {iterations: 4}).start(() => {
-      setHighlightOrderId(null);
-    });
-
     // Scroll hasta la orden resaltada
-    setTimeout(() => {
+    const t = setTimeout(() => {
       const idx = orders.findIndex(o => String(o.id) === String(highlightOrderId));
-      console.log('[DeliveryOrders] Scroll a highlight - idx:', idx, 'total:', orders.length);
       if (idx >= 0 && flatListRef.current) {
         try {
           flatListRef.current.scrollToIndex({index: idx, animated: true, viewPosition: 0.3});
@@ -653,32 +635,10 @@ const DeliveryOrdersScreen = () => {
           flatListRef.current.scrollToOffset({offset: idx * 220, animated: true});
         }
       }
-    }, 600);
+      setHighlightOrderId(null);
+    }, 1200);
+    return () => clearTimeout(t);
   }, [highlightOrderId, orders]);
-
-  // Animacion de parpadeo para highlightMultiple (alert border)
-  useEffect(() => {
-    if (highlightMultiple.length === 0) {
-      alertBlinkAnim.setValue(0);
-      return;
-    }
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(alertBlinkAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: false,
-        }),
-        Animated.timing(alertBlinkAnim, {
-          toValue: 0,
-          duration: 600,
-          useNativeDriver: false,
-        }),
-      ]),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [highlightMultiple]);
 
   // ─── GPS Tracking: auto-start for active shipped orders ──────────────
 
@@ -851,7 +811,7 @@ const DeliveryOrdersScreen = () => {
           try {
             setActionLoading(order.id);
             await apiService.acceptOrder(order.id);
-            showToast('Pedido aceptado correctamente. ¡En camino!');
+            showToast('Pedido aceptado correctamente. En camino');
             // Iniciar rastreo GPS para esta entrega
             startTracking(order.id).catch(() => {});
             // Cambiar a Mis entregas y highlight del pedido aceptado
@@ -932,7 +892,7 @@ const DeliveryOrdersScreen = () => {
           </View>
           <Text style={styles.emptyTitle}>Desconectado</Text>
           <Text style={styles.emptyText}>
-            Conectate para ver y aceptar pedidos disponibles.
+            Conéctate para ver y aceptar pedidos disponibles.
           </Text>
         </View>
       );
@@ -996,24 +956,11 @@ const DeliveryOrdersScreen = () => {
         <Animated.View
           style={[
             styles.cardWrapper,
-            isHighlighted && {
-              transform: [{scale: pulseAnim}],
-            },
           ]}>
         <Animated.View style={[
           styles.card,
           isHighlighted && styles.cardHighlighted,
           isAlertHighlight && styles.cardAlertHighlight,
-          isAlertHighlight && {
-            borderColor: alertBlinkAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: ['#FF572244', '#FF5722'],
-            }),
-            shadowOpacity: alertBlinkAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.1, 0.6],
-            }),
-          },
         ]}>
           {/* Card Header */}
           <View style={styles.cardHeader}>
@@ -1342,7 +1289,7 @@ const DeliveryOrdersScreen = () => {
               {routePoints.length > 1 && (
                 <Polyline
                   coordinates={routePoints}
-                  strokeColor="#3498DB"
+                  strokeColor={theme.colors.info}
                   strokeWidth={5}
                   strokeCap="round"
                   strokeJoin="round"
@@ -1371,7 +1318,7 @@ const DeliveryOrdersScreen = () => {
           {routeLoading && mapCoords && (
             <View style={styles.routeLoadingOverlay}>
               <View style={styles.routeLoadingBadge}>
-                <ActivityIndicator size="small" color="#3498DB" />
+                <ActivityIndicator size="small" color={theme.colors.info} />
                 <Text style={styles.routeLoadingText}>Calculando ruta...</Text>
               </View>
             </View>
@@ -1391,7 +1338,7 @@ const DeliveryOrdersScreen = () => {
                   onPress={handleShowFullRoute}
                   style={[styles.mapControlBtn, {marginTop: theme.spacing.sm}]}
                   activeOpacity={0.7}>
-                  <Icon name="swap-horizontal" size={22} color="#3498DB" />
+                  <Icon name="swap-horizontal" size={22} color={theme.colors.info} />
                 </TouchableOpacity>
               )}
             </View>
@@ -1404,12 +1351,12 @@ const DeliveryOrdersScreen = () => {
           {routeData && (
             <View style={styles.routeInfoBar}>
               <View style={styles.routeInfoItem}>
-                <Icon name="car-outline" size={16} color="#3498DB" />
+                <Icon name="car-outline" size={16} color={theme.colors.info} />
                 <Text style={styles.routeInfoText}>{routeData.distance}</Text>
               </View>
               <View style={styles.routeInfoDivider} />
               <View style={styles.routeInfoItem}>
-                <Icon name="time-outline" size={16} color="#3498DB" />
+                <Icon name="time-outline" size={16} color={theme.colors.info} />
                 <Text style={styles.routeInfoText}>{routeData.duration}</Text>
               </View>
             </View>
@@ -1504,8 +1451,8 @@ const DeliveryOrdersScreen = () => {
           value={localOnline}
           onValueChange={handleToggleOnline}
           disabled={onlineLoading}
-          trackColor={{false: '#D1D5DB', true: '#4CAF50'}}
-          thumbColor={onlineLoading ? '#F5F5F5' : theme.colors.white}
+          trackColor={{false: theme.colors.border, true: theme.colors.success}}
+          thumbColor={onlineLoading ? theme.colors.inputBg : theme.colors.white}
           ios_backgroundColor="#D1D5DB"
         />
       </View>
@@ -1518,7 +1465,7 @@ const DeliveryOrdersScreen = () => {
         <View style={styles.offlineBanner}>
           <Icon name="information-circle-outline" size={14} color="#E65100" />
           <Text style={styles.offlineBannerText}>
-            Conectate para ver y aceptar pedidos
+            Conéctate para ver y aceptar pedidos
           </Text>
         </View>
       )}
@@ -1642,7 +1589,7 @@ const createStyles = (primary) => StyleSheet.create({
     backgroundColor: theme.colors.inputBg,
   },
   tabActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.success,
   },
   tabLabel: {
     fontSize: theme.fontSize.sm,
@@ -1684,7 +1631,7 @@ const createStyles = (primary) => StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: '#FFF3E0',
+    backgroundColor: theme.colors.warningLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1727,22 +1674,12 @@ const createStyles = (primary) => StyleSheet.create({
     ...theme.shadows.sm,
   },
   cardHighlighted: {
-    borderColor: '#4CAF50',
+    borderColor: theme.colors.success,
     borderWidth: 2,
-    shadowColor: '#4CAF50',
-    shadowOffset: {width: 0, height: 0},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
   },
   cardAlertHighlight: {
-    borderColor: '#FF5722',
+    borderColor: theme.colors.danger,
     borderWidth: 2,
-    shadowColor: '#FF5722',
-    shadowOffset: {width: 0, height: 0},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -1812,7 +1749,6 @@ const createStyles = (primary) => StyleSheet.create({
   itemsSummaryText: {
     fontSize: theme.fontSize.xs,
     color: theme.colors.textSecondary,
-    fontStyle: 'italic',
   },
 
   // Card Footer
@@ -1862,13 +1798,13 @@ const createStyles = (primary) => StyleSheet.create({
     ...theme.shadows.sm,
   },
   acceptButton: {
-    backgroundColor: '#1ABC9C',
+    backgroundColor: theme.colors.teal,
   },
   mapButton: {
-    backgroundColor: '#3498DB',
+    backgroundColor: theme.colors.info,
   },
   chatButton: {
-    backgroundColor: '#3498DB',
+    backgroundColor: theme.colors.info,
   },
   deliverButton: {
     backgroundColor: theme.colors.success,
@@ -1893,7 +1829,7 @@ const createStyles = (primary) => StyleSheet.create({
   // ─── Native Map Modal ─────────────────────────────────────────────────
   mapSafeArea: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.inputBg,
   },
   mapHeader: {
     flexDirection: 'row',
@@ -1945,7 +1881,7 @@ const createStyles = (primary) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.md,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.inputBg,
   },
   mapLoadingText: {
     fontSize: theme.fontSize.md,
@@ -1957,7 +1893,7 @@ const createStyles = (primary) => StyleSheet.create({
     justifyContent: 'center',
     gap: theme.spacing.md,
     paddingHorizontal: theme.spacing.xl,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.inputBg,
   },
   mapErrorText: {
     fontSize: theme.fontSize.md,
@@ -2043,7 +1979,7 @@ const createStyles = (primary) => StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#4285F4',
+    backgroundColor: theme.colors.info,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
@@ -2084,7 +2020,7 @@ const createStyles = (primary) => StyleSheet.create({
   routeInfoText: {
     fontSize: theme.fontSize.md,
     fontWeight: '700',
-    color: '#3498DB',
+    color: theme.colors.info,
   },
   routeInfoDivider: {
     width: 1,
@@ -2124,7 +2060,7 @@ const createStyles = (primary) => StyleSheet.create({
   },
   // ─── Offline Overlay Banner ──────────────────────────────────────────
   offlineBanner: {
-    backgroundColor: '#FFF3E0',
+    backgroundColor: theme.colors.warningLight,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.xs,
     alignItems: 'center',
@@ -2132,7 +2068,7 @@ const createStyles = (primary) => StyleSheet.create({
   },
   offlineBannerText: {
     fontSize: theme.fontSize.xs,
-    color: '#E65100',
+    color: theme.colors.warning,
     fontWeight: '500',
   },
 
@@ -2148,10 +2084,10 @@ const createStyles = (primary) => StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
   },
   onlineBarOn: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.successLight,
   },
   onlineBarOff: {
-    backgroundColor: '#FFF3E0',
+    backgroundColor: theme.colors.warningLight,
   },
   onlineBarInfo: {
     flexDirection: 'row',
@@ -2164,20 +2100,20 @@ const createStyles = (primary) => StyleSheet.create({
     borderRadius: 4,
   },
   onlineBarDotOn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.success,
   },
   onlineBarDotOff: {
-    backgroundColor: '#FF9800',
+    backgroundColor: theme.colors.warning,
   },
   onlineBarText: {
     fontSize: theme.fontSize.sm,
     fontWeight: '600',
   },
   onlineBarTextOn: {
-    color: '#2E7D32',
+    color: theme.colors.success,
   },
   onlineBarTextOff: {
-    color: '#E65100',
+    color: theme.colors.warning,
   },
 });
 

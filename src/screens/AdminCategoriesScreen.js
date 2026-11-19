@@ -241,7 +241,7 @@ const AdminCategoriesScreen = () => {
           style={styles.actionBtn}
           onPress={() => openEditModal(item)}
           activeOpacity={0.7}>
-          <Icon name="create-outline" size={20} color="#3498DB" />
+          <Icon name="create-outline" size={20} color={theme.colors.info} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.actionBtn}
@@ -500,7 +500,7 @@ const createStyles = (primary) => StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: theme.borderRadius.md,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: theme.colors.inputBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -541,7 +541,7 @@ const createStyles = (primary) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: theme.borderRadius.md,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: theme.colors.inputBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -594,7 +594,7 @@ const createStyles = (primary) => StyleSheet.create({
     elevation: 6,
     shadowColor: primary,
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
   },
 
@@ -658,7 +658,7 @@ const createStyles = (primary) => StyleSheet.create({
     borderWidth: 1.5,
     borderColor: theme.colors.border,
     borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.inputBg || '#F0F2F5',
+    backgroundColor: theme.colors.inputBg || theme.colors.inputBg,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     fontSize: theme.fontSize.md,

@@ -562,9 +562,9 @@ const AdminStoresScreen = () => {
                   <Text style={styles.logoBtnText}>{form.logo ? 'Cambiar logo' : 'Subir logo'}</Text>
                 </TouchableOpacity>
                 {form.logo ? (
-                  <TouchableOpacity onPress={() => updateField('logo', '')} activeOpacity={0.7} style={[styles.logoBtn, {borderColor: '#EF4444'}]}>
+                  <TouchableOpacity onPress={() => updateField('logo', '')} activeOpacity={0.7} style={[styles.logoBtn, {borderColor: theme.colors.danger}]}>
                     <Icon name="trash-outline" size={16} color="#EF4444" />
-                    <Text style={[styles.logoBtnText, {color: '#EF4444'}]}>Eliminar</Text>
+                    <Text style={[styles.logoBtnText, {color: theme.colors.danger}]}>Eliminar</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>

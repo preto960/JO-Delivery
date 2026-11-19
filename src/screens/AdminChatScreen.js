@@ -315,10 +315,10 @@ const AdminChatScreen = ({navigation}) => {
   };
 
   const getPlatformColor = platform => {
-    if (platform === 'landingpage') return '#C9A84C';
-    if (platform === 'frontend-shop') return '#3b82f6';
-    if (platform === 'app-shop') return '#22c55e';
-    if (platform === 'app-delivery') return '#f97316';
+    if (platform === 'landingpage') return theme.colors.warning;
+    if (platform === 'frontend-shop') return theme.colors.info;
+    if (platform === 'app-shop') return theme.colors.success;
+    if (platform === 'app-delivery') return theme.colors.warning;
     return primary;
   };
 
@@ -616,8 +616,8 @@ const AdminChatScreen = ({navigation}) => {
                   styles.statusDot,
                   {
                     backgroundColor: pusherConnected
-                      ? '#22C55E'
-                      : '#EF4444',
+                      ? theme.colors.success
+                      : theme.colors.danger,
                   },
                 ]}
               />
@@ -735,7 +735,7 @@ const createStyles = primary =>
       width: 10,
       height: 10,
       borderRadius: 5,
-      backgroundColor: '#22C55E',
+      backgroundColor: theme.colors.success,
       borderWidth: 2,
       borderColor: theme.colors.white,
     },
@@ -780,7 +780,7 @@ const createStyles = primary =>
       color: theme.colors.text,
     },
     membersCountBadge: {
-      backgroundColor: '#22C55E',
+      backgroundColor: theme.colors.success,
       borderRadius: 10,
       minWidth: 18,
       height: 18,
@@ -849,7 +849,7 @@ const createStyles = primary =>
       width: 10,
       height: 10,
       borderRadius: 5,
-      backgroundColor: '#22C55E',
+      backgroundColor: theme.colors.success,
       borderWidth: 2,
       borderColor: theme.colors.white,
     },

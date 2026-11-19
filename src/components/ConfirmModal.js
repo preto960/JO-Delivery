@@ -86,7 +86,7 @@ const ConfirmModal = ({
       case 'danger':
         return primary;
       case 'alert':
-        return '#3498DB';
+        return theme.colors.info;
       default:
         return primary;
     }
