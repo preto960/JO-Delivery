@@ -288,6 +288,19 @@ const fetchUsers = async (params = {}) => {
   return api.get('/auth/users', {params});
 };
 
+// Repartidores (para asignación de pedidos) y asignación de delivery
+const fetchDeliveryUsers = async () => {
+  const api = await createApiClient();
+  if (!api) throw new Error('No hay URL del servidor configurada');
+  return api.get('/auth/users', {params: {role: 'delivery'}});
+};
+
+const assignOrderDelivery = async (orderId, deliveryId) => {
+  const api = await createApiClient();
+  if (!api) throw new Error('No hay URL del servidor configurada');
+  return api.put(`/orders/${orderId}/assign`, {deliveryId});
+};
+
 const updateUserRoles = async (userId, roleIds) => {
   const api = await createApiClient();
   if (!api) throw new Error('No hay URL del servidor configurada');
@@ -579,6 +592,8 @@ const apiService = {
   updateRole,
   deleteRole,
   fetchUsers,
+  fetchDeliveryUsers,
+  assignOrderDelivery,
   updateUserRoles,
   grantUserPermission,
   revokeUserPermission,
